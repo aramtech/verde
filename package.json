@@ -1,33 +1,32 @@
 {
-    "name": "verde",
-    "module": "index.ts",
-    "type": "module",
-    "scripts": {
-        "fmt": "prettier . --write",
-        "ci": "prettier . --check"
-    },
-    "devDependencies": {
-        "@types/bun": "latest",
-        "jest": "^29.7.0",
-        "prettier": "^3.3.3"
-    },
-    "peerDependencies": {
-        "typescript": "^5.0.0"
-    },
-    "prettier": {
-        "semi": true,
-        "arrowParens": "avoid",
-        "singleQuote": false,
-        "jsxSingleQuote": false,
-        "tabWidth": 4,
-        "printWidth": 120
-    },
-    "dependencies": {
-        "commander": "^12.1.0"
-    },
-    "jest": {
-        "resetModules": true,
-        "verbose": true,
-        "resetMocks": true
-    }
+  "name": "verde",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "fmt": "prettier . --write",
+    "ci": "prettier . --check"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prettier": "^3.3.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "prettier": {
+    "semi": true,
+    "arrowParens": "avoid",
+    "singleQuote": false,
+    "jsxSingleQuote": false,
+    "tabWidth": 4,
+    "printWidth": 120
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "jest": {
+    "resetModules": true,
+    "verbose": true,
+    "resetMocks": true
+  }
 }
