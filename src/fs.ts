@@ -7,8 +7,8 @@ export type CollectOpts = {
 };
 
 export type CollectResult = {
-    name: string;
-    path: string;
+    dirname: string;
+    dirPath: string;
     contents: string[];
 };
 
@@ -49,7 +49,7 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
 
     if (contents.find(x => x === configFilename)) {
         const fullContents = await collectFilePathsIn(initialPath);
-        return [{ name: basename, contents: fullContents, path: initialPath }];
+        return [{ dirname: basename, contents: fullContents, dirPath: initialPath }];
     }
 
     let results: CollectResult[] = [];
@@ -66,3 +66,5 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
 
     return results;
 };
+
+export const readFiles = async (paths: string[]) => await Promise.all(paths.map(f => fs.readFile(f)));
