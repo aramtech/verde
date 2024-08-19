@@ -1,6 +1,7 @@
 import { program } from "commander";
-import { addListToProgram } from "./cli";
+import { addInitCommand, addListToProgram } from "./cli";
 
 addListToProgram(program);
+addInitCommand(program);
 
 program.parse();
