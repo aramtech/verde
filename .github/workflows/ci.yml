@@ -26,4 +26,5 @@ jobs:
                   restore-keys: ${{ runner.os }}-bun-linux-
 
             - run: bun install
-            - run: bun run ci
+            - run: bunx prettier . --check
+            - run: bunx vitest

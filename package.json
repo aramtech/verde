@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "fmt": "prettier . --write",
-    "ci": "prettier . --check",
     "test": "vitest"
   },
   "devDependencies": {
