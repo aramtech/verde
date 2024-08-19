@@ -73,3 +73,10 @@ export const storeObjectInCwd = async <T>(nameOrPath: string, object: T) =>
     await fs.writeFile(nameOrPath, JSON.stringify(object));
 
 export const isStoredOnDisk = async (nameOrPath: string) => await fs.exists(nameOrPath);
+
+export const readJSON = async <T>(path: string) => {
+    const contents = await fs.readFile(path);
+    return JSON.parse(contents.toString("utf-8")) as T;
+};
+
+export const removeDir = async (p: string) => await fs.rmdir(p, { recursive: true });
