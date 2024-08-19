@@ -1,11 +1,23 @@
 {
-  "name": "verde",
-  "module": "index.ts",
-  "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  }
+    "name": "verde",
+    "module": "index.ts",
+    "type": "module",
+    "scripts": {
+        "fmt": "prettier . --write"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "prettier": "^3.3.3"
+    },
+    "peerDependencies": {
+        "typescript": "^5.0.0"
+    },
+    "prettier": {
+        "semi": true,
+        "arrowParens": "avoid",
+        "singleQuote": false,
+        "jsxSingleQuote": false,
+        "tabWidth": 4,
+        "printWidth": 120
+    }
 }
