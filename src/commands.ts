@@ -3,15 +3,15 @@ import { removeUtilityFromProject, initNewUtility, listUtilitiesInProject } from
 
 export const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
-        const configs = await listUtilitiesInProject(".");
+        const utils = await listUtilitiesInProject(".");
 
-        if (configs.length === 0) {
+        if (utils.length === 0) {
             console.warn("no tool found!.");
             return;
         }
 
-        for (const config of configs) {
-            console.log("Tool found: ", config.name);
+        for (const config of utils) {
+            console.log("Tool found: ", config.configFile.name);
         }
     });
 

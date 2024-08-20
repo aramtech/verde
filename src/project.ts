@@ -14,18 +14,31 @@ import { checkIfNameIsAvailable } from "./github";
 
 const configFilename = "utils.json";
 
-export const listUtilitiesInProject = async (projectPath: string) => {
+type UtilityDescription = {
+    configFile: UtilityFile;
+    path: string;
+    files: string[];
+};
+
+export const listUtilitiesInProject = async (projectPath: string): Promise<UtilityDescription[]> => {
     const traverseResult = await collectDirsWithFile(projectPath, {
         exclude: ["node_modules", ".git"],
         configFilename: configFilename,
     });
 
-    const utilsConfigFilePaths = traverseResult.map(t => join(t.dirPath, configFilename));
+    const descArr: UtilityDescription[] = [];
 
-    const utilsFilesContent = await readFiles(utilsConfigFilePaths);
-    const utilConfigs = utilsFilesContent.map(parseUtilityFileFromBuffer);
+    for (const tr of traverseResult) {
+        const configFile = await readJSON<UtilityFile>(join(tr.dirPath, configFilename));
 
-    return utilConfigs;
+        descArr.push({
+            configFile,
+            files: tr.contents,
+            path: tr.dirPath,
+        });
+    }
+
+    return descArr;
 };
 
 export const initNewUtility = async (name: string, description: string) => {
