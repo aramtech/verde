@@ -1,5 +1,5 @@
 import { describe, test, beforeAll, afterEach, vi, expect } from "vitest";
-import { addCommands } from "./cli";
+import { addCommands } from "./commands";
 import { Command } from "commander";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
