@@ -1,15 +1,21 @@
-import { describe, test, beforeAll, vi, expect } from "vitest";
-import { addInitCommand } from "./cli";
+import { describe, test, beforeAll, afterEach, vi, expect } from "vitest";
+import { addCommands, addInitCommand } from "./cli";
 import { Command } from "commander";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
+import { randomInt } from "crypto";
+import path from "path";
 
 describe("cli.ts", () => {
+    let originalCwd: string = process.cwd();
+
     beforeAll(async () => {
         fs.exists = existsSync as any;
     });
 
-    test("should initialize a package at the cwd.", async () => {
+    afterEach(() => process.chdir(originalCwd));
+
+    test("init command: should initialize a package at the cwd.", async () => {
         vi.spyOn(fs, "writeFile").mockImplementation(async () => {});
 
         const cmd = new Command();
@@ -20,7 +26,7 @@ describe("cli.ts", () => {
         expect(fs.writeFile).toHaveBeenCalledTimes(1);
     });
 
-    test("package already exists in the current dir.", async () => {
+    test("init command: package already exists in the current dir.", async () => {
         vi.spyOn(fs, "writeFile").mockImplementation(async () => {});
         vi.spyOn(fs, "exists").mockImplementation(async () => true);
         vi.spyOn(console, "error");
@@ -36,5 +42,49 @@ describe("cli.ts", () => {
         );
 
         expect(console.error).toHaveBeenCalledWith("directory already managed by verde!.");
+    });
+
+    test("list command: no packages at the current directory.", async () => {
+        vi.spyOn(console, "warn");
+
+        const testDirPath = `/tmp/test-dir-${randomInt(1_000_000)}`;
+        await fs.mkdir(testDirPath);
+
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "list", testDirPath]);
+
+        expect(console.warn).toHaveBeenCalledWith("no tool found!.");
+    });
+
+    test("list command: should list all the tools in the path correctly.", async () => {
+        vi.spyOn(console, "log");
+
+        const testDirPath = `/tmp/test-dir-${randomInt(1_000_000)}`;
+        await fs.mkdir(testDirPath);
+
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
+
+        await fs.mkdir(path.join(testDirPath, "bar-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "bar-util", "utils.json"),
+            JSON.stringify({ name: "bar", deps: {}, version: "10.0.0", hash: "bar" }),
+        );
+
+        await fs.mkdir(path.join(testDirPath, "baz-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "baz-util", "utils.json"),
+            JSON.stringify({ name: "baz", deps: {}, version: "10.0.0", hash: "baz" }),
+        );
+
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "list", testDirPath]);
+
+        expect(console.log).toHaveBeenCalledWith("Tool found: ", "foo");
+        expect(console.log).toHaveBeenCalledWith("Tool found: ", "bar");
+        expect(console.log).toHaveBeenCalledWith("Tool found: ", "baz");
     });
 });

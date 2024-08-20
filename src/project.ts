@@ -20,7 +20,8 @@ export const listUtilitiesInProject = async (projectPath: string) => {
         configFilename: configFilename,
     });
 
-    const utilsConfigFilePaths = traverseResult.map(t => join(".", t.dirPath, configFilename));
+    const utilsConfigFilePaths = traverseResult.map(t => join(t.dirPath, configFilename));
+
     const utilsFilesContent = await readFiles(utilsConfigFilePaths);
     const utilConfigs = utilsFilesContent.map(parseUtilityFileFromBuffer);
 
