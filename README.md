@@ -13,7 +13,7 @@ a CLI tool for vendoring utilities.
 To turn a directory with TypeScript/JavaScript modules into a vendored utility run:
 
 ```bash
-verde init <utility-name> -d [description]
+$ verde init <utility-name> -d [description]
 ```
 
 This will create a `utils.json` file, which is a simple config file that contains:
@@ -36,7 +36,7 @@ This will create a `utils.json` file, which is a simple config file that contain
 You can list the utilities in a given project by running:
 
 ```bash
-verde list
+$ verde list
 
 * string-utils@1.5 | Utilities for manipulating with strings
 * odoo-integration@0.1 | Utilities for integrating with odoo *private*
@@ -45,7 +45,7 @@ verde list
 You can remove a utility from your project by running:
 
 ```bash
-verde remove string-utils
+$ verde remove string-utils
 
 string-utils@1.5 Was removed successfully
 ```
@@ -53,7 +53,7 @@ string-utils@1.5 Was removed successfully
 You can push a utility to github by running:
 
 ```bash
-verde push string-utils
+$ verde push string-utils
 
 string-utils@1.5 Was pushed to github successfully
 ```
@@ -61,7 +61,7 @@ string-utils@1.5 Was pushed to github successfully
 You can pull a utility from github by running:
 
 ```bash
-verde pull string-utils
+$ verde pull string-utils
 
 string-utils@1.5 was added to the project successfully
 ```
@@ -69,7 +69,7 @@ string-utils@1.5 was added to the project successfully
 You can make a utility private by running:
 
 ```bash
-verde hide string-utils
+$ verde hide string-utils
 ```
 
 You can make it public again by running:
