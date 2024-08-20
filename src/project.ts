@@ -74,17 +74,12 @@ export const initNewUtility = async (name: string, description: string) => {
 };
 
 export const removeUtilityFromProject = async (projectPath: string, name: string) => {
-    const traverseResult = await collectDirsWithFile(projectPath, {
-        exclude: ["node_modules", ".git"],
-        configFilename: configFilename,
-    });
+    const utils = await listUtilitiesInProject(projectPath);
 
-    for (const tr of traverseResult) {
-        const configFile = await readJSON<UtilityFile>(join(".", tr.dirPath, configFilename));
-
-        if (configFile.name === name) {
+    for (const util of utils) {
+        if (util.configFile.name === name) {
             console.log("found utility file, deleting...");
-            await removeDir(tr.dirPath);
+            await removeDir(util.path);
             return;
         }
     }
