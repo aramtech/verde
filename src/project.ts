@@ -1,6 +1,16 @@
-import { collectDirsWithFile, isStoredOnDisk, readFiles, readJSON, removeDir, storeObjectInCwd } from "./fs";
-import { join } from "path";
-import { type UtilityFile, initUtility, parseUtilityFileFromBuffer } from "./utility";
+import {
+    collectDirsWithFile,
+    collectFilePathsIn,
+    isStoredOnDisk,
+    readFiles,
+    readJSON,
+    removeDir,
+    storeObjectInCwd,
+} from "./fs";
+import { join, basename } from "path";
+import { type UtilityFile, parseUtilityFileFromBuffer } from "./utility";
+import { hashBuffersWithSha256 } from "./crypto";
+import { checkIfNameIsAvailable } from "./github";
 
 const configFilename = "utils.json";
 
@@ -18,14 +28,34 @@ export const listUtilitiesInProject = async (projectPath: string) => {
 };
 
 export const initializeUtilityIn = async (name: string) => {
-    const util = initUtility(name);
-
     if (await isStoredOnDisk(configFilename)) {
-        console.error("utility already managed by verde");
+        console.error("directory already managed by verde!.");
         return;
     }
 
-    await storeObjectInCwd(configFilename, util);
+    const nameNotAvailable = (await checkIfNameIsAvailable(name)) === false;
+
+    if (nameNotAvailable) {
+        console.error("name taken by a different utility.");
+        return;
+    }
+
+    const paths = await collectFilePathsIn(".");
+
+    const sortedPaths = paths
+        .slice(0)
+        .sort()
+        .filter(p => basename(p) !== configFilename);
+
+    const files = await readFiles(sortedPaths);
+    const hash = hashBuffersWithSha256(files);
+
+    await storeObjectInCwd<UtilityFile>(configFilename, {
+        name,
+        deps: {},
+        hash,
+        version: "0.1.0",
+    });
 };
 
 export const removeUtilityFromProject = async (projectPath: string, name: string) => {

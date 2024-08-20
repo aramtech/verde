@@ -12,7 +12,7 @@ export type CollectResult = {
     contents: string[];
 };
 
-const collectFilePathsIn = async (dir: string) => {
+export const collectFilePathsIn = async (dir: string) => {
     const contents = await fs.readdir(dir);
     let results: string[] = [];
 
