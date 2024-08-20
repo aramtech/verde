@@ -49,9 +49,10 @@ describe("cli.ts", () => {
 
         const testDirPath = `/tmp/test-dir-${randomInt(1_000_000)}`;
         await fs.mkdir(testDirPath);
+        process.chdir(testDirPath);
 
         const cmd = addCommands(new Command());
-        await cmd.parseAsync(["node", "verde", "list", testDirPath]);
+        await cmd.parseAsync(["node", "verde", "list"]);
 
         expect(console.warn).toHaveBeenCalledWith("no tool found!.");
     });
@@ -61,6 +62,7 @@ describe("cli.ts", () => {
 
         const testDirPath = `/tmp/test-dir-${randomInt(1_000_000)}`;
         await fs.mkdir(testDirPath);
+        process.chdir(testDirPath);
 
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
@@ -81,7 +83,7 @@ describe("cli.ts", () => {
         );
 
         const cmd = addCommands(new Command());
-        await cmd.parseAsync(["node", "verde", "list", testDirPath]);
+        await cmd.parseAsync(["node", "verde", "list"]);
 
         expect(console.log).toHaveBeenCalledWith("Tool found: ", "foo");
         expect(console.log).toHaveBeenCalledWith("Tool found: ", "bar");

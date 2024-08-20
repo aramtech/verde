@@ -2,15 +2,15 @@ import type { Command } from "commander";
 import { removeUtilityFromProject, initializeUtilityIn, listUtilitiesInProject } from "./project";
 
 export const addListToProgram = (program: Command) =>
-    program.command("list <path>").action(async path => {
-        const utils = await listUtilitiesInProject(path);
+    program.command("list").action(async () => {
+        const configs = await listUtilitiesInProject(".");
 
-        if (utils.length === 0) {
+        if (configs.length === 0) {
             console.warn("no tool found!.");
             return;
         }
 
-        for (const config of await listUtilitiesInProject(path)) {
+        for (const config of configs) {
             console.log("Tool found: ", config.name);
         }
     });
