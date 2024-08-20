@@ -20,7 +20,7 @@ export const addInitCommand = (program: Command) =>
         .command("init <name>")
         .option("-d, --description <description>")
         .action(async (p, { description = "" }) => {
-            await initNewUtility(p, description);
+            await initNewUtility(p, description.trim());
         });
 
 export const addRemoveUtilityCommand = (program: Command) =>

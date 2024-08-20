@@ -1,10 +1,12 @@
 import { describe, test, beforeAll, afterEach, vi, expect } from "vitest";
-import { addCommands, addInitCommand } from "./cli";
+import { addCommands } from "./cli";
 import { Command } from "commander";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
+import { readJSON } from "./fs";
+import { type UtilityFile } from "./utility";
 
 describe("cli.ts", () => {
     let originalCwd: string = process.cwd();
@@ -28,11 +30,14 @@ describe("cli.ts", () => {
         await moveToTestDir();
 
         const cmd = new Command();
-        addInitCommand(cmd);
+        addCommands(cmd);
 
-        await cmd.parseAsync(["node", "verde", "init", "foo"]);
+        await cmd.parseAsync(["node", "verde", "init", "foo", "-d FOO IS GREAT BAR IS NONE"]);
 
-        expect(await fs.exists("utils.json")).toBe(true);
+        const utilFile = await readJSON<UtilityFile>("utils.json");
+
+        expect(utilFile.name).toBe("foo");
+        expect(utilFile.description).toBe("FOO IS GREAT BAR IS NONE");
     });
 
     test("init command: package already exists in the current dir.", async () => {
@@ -41,7 +46,7 @@ describe("cli.ts", () => {
         vi.spyOn(console, "error");
 
         const cmd = new Command();
-        addInitCommand(cmd);
+        addCommands(cmd);
 
         await cmd.parseAsync(["node", "verde", "init", "foo"]);
         await cmd.parseAsync(["node", "verde", "init", "foo"]);
@@ -52,7 +57,7 @@ describe("cli.ts", () => {
     test("list command: no packages at the current directory.", async () => {
         vi.spyOn(console, "warn");
 
-        const testDirPath = await moveToTestDir();
+        await moveToTestDir();
 
         const cmd = addCommands(new Command());
         await cmd.parseAsync(["node", "verde", "list"]);
