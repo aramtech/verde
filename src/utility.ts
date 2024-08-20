@@ -2,6 +2,8 @@ export type UtilityFile = { name: string } & Partial<{
     version: string;
     deps: Record<string, string>;
     hash: string;
+    private: boolean;
+    description: string;
 }>;
 
 export const parseUtilityFileFromBuffer = (buff: Buffer) => {

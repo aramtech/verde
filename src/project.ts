@@ -28,7 +28,7 @@ export const listUtilitiesInProject = async (projectPath: string) => {
     return utilConfigs;
 };
 
-export const initializeUtilityIn = async (name: string) => {
+export const initNewUtility = async (name: string, description: string) => {
     if (await isStoredOnDisk(configFilename)) {
         console.error("directory already managed by verde!.");
         return;
@@ -56,6 +56,7 @@ export const initializeUtilityIn = async (name: string) => {
         deps: {},
         hash,
         version: "0.1.0",
+        description,
     });
 };
 

@@ -15,31 +15,36 @@ describe("cli.ts", () => {
 
     afterEach(() => process.chdir(originalCwd));
 
+    const moveToTestDir = async () => {
+        const name = `/tmp/${randomInt(500_000)}`;
+
+        await fs.mkdir(name);
+        process.chdir(name);
+
+        return name;
+    };
+
     test("init command: should initialize a package at the cwd.", async () => {
-        vi.spyOn(fs, "writeFile").mockImplementation(async () => {});
+        await moveToTestDir();
 
         const cmd = new Command();
         addInitCommand(cmd);
 
         await cmd.parseAsync(["node", "verde", "init", "foo"]);
 
-        expect(fs.writeFile).toHaveBeenCalledTimes(1);
+        expect(await fs.exists("utils.json")).toBe(true);
     });
 
     test("init command: package already exists in the current dir.", async () => {
-        vi.spyOn(fs, "writeFile").mockImplementation(async () => {});
-        vi.spyOn(fs, "exists").mockImplementation(async () => true);
+        await moveToTestDir();
+
         vi.spyOn(console, "error");
 
         const cmd = new Command();
         addInitCommand(cmd);
 
         await cmd.parseAsync(["node", "verde", "init", "foo"]);
-
-        expect(fs.writeFile).not.toHaveBeenCalledWith(
-            "utils.json",
-            JSON.stringify({ name: "foo", deps: {}, hash: "foo", version: "0.0.1" }),
-        );
+        await cmd.parseAsync(["node", "verde", "init", "foo"]);
 
         expect(console.error).toHaveBeenCalledWith("directory already managed by verde!.");
     });
@@ -47,9 +52,7 @@ describe("cli.ts", () => {
     test("list command: no packages at the current directory.", async () => {
         vi.spyOn(console, "warn");
 
-        const testDirPath = `/tmp/test-dir-${randomInt(1_000_000)}`;
-        await fs.mkdir(testDirPath);
-        process.chdir(testDirPath);
+        const testDirPath = await moveToTestDir();
 
         const cmd = addCommands(new Command());
         await cmd.parseAsync(["node", "verde", "list"]);
@@ -60,9 +63,7 @@ describe("cli.ts", () => {
     test("list command: should list all the tools in the path correctly.", async () => {
         vi.spyOn(console, "log");
 
-        const testDirPath = `/tmp/test-dir-${randomInt(1_000_000)}`;
-        await fs.mkdir(testDirPath);
-        process.chdir(testDirPath);
+        const testDirPath = await moveToTestDir();
 
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
