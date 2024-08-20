@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { removeUtilityFromProject, initNewUtility, listUtilitiesInProject } from "./project";
 
-export const addListToProgram = (program: Command) =>
+const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
         const utils = await listUtilitiesInProject(".");
 
@@ -15,7 +15,7 @@ export const addListToProgram = (program: Command) =>
         }
     });
 
-export const addInitCommand = (program: Command) =>
+const addInitCommand = (program: Command) =>
     program
         .command("init <name>")
         .option("-d, --description <description>")
@@ -23,7 +23,7 @@ export const addInitCommand = (program: Command) =>
             await initNewUtility(p, description.trim());
         });
 
-export const addRemoveUtilityCommand = (program: Command) =>
+const addRemoveUtilityCommand = (program: Command) =>
     program.command("remove <name>").action(async p => {
         await removeUtilityFromProject(".", p);
     });
