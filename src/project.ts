@@ -135,7 +135,7 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
 
     if (!util) {
         logger.fatal(`could not find utility with name ${nameOrDesc}`);
-        return;
+        process.exit(1);
     }
 
     console.log(`found ${util.configFile.name} computing it's file hash...`);
@@ -152,10 +152,19 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
             join(util.path, configFilename),
             updateUtilityHash(util.configFile, currentHash),
         );
-        return;
+        return {
+            currentHash,
+            previousHash,
+            match: currentHash == previousHash,
+        };
     }
-
     console.log(`${util.configFile.name} hash match!. no changes detected`);
+
+    return {
+        currentHash,
+        previousHash,
+        match: currentHash == previousHash,
+    };
 };
 const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
     let result: T[][] = [];

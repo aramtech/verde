@@ -10,7 +10,6 @@ import logger from "./logger";
 import { listUtilitiesInDirectory } from "./project";
 import { validate_utility_name, validate_utility_version } from "./utility";
 
-
 import {
     checkAllUtilities,
     checkUtility,
@@ -55,8 +54,8 @@ const addPushUtilityCommand = (program: Command) =>
          * - validate utility name --
          * - check if remote repo exists
          *   - if so --
-         *     - create the remote repo and -- 
-         *     - push content -- 
+         *     - create the remote repo and --
+         *     - push content --
          *   - if not
          *     - pull remote utility config file
          *     - compare versions
@@ -77,6 +76,9 @@ const addPushUtilityCommand = (program: Command) =>
             logger.fatal('utility named "', utility_name, '" is not found');
             return;
         }
+        const hash = await checkUtility(util.configFile.name);
+        util.configFile.hash = hash.currentHash;
+
         if (util.configFile.private) {
             logger.error("this utility is private it cannot be uploaded");
             return;
