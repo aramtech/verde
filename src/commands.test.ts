@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
-import { readJSON } from "./fs";
+import { readJSON, storeObjectInCwd } from "./fs";
 import { type UtilityFile } from "./utility";
 
 describe("CLI", () => {
@@ -221,5 +221,58 @@ describe("CLI", () => {
         const utilFile = await readJSON<UtilityFile>("./foo-util/utils.json");
 
         expect(utilFile.private).toBe(false);
+    });
+
+    test("check command: should log an error if the utility cannot be found.", async () => {
+        vi.spyOn(console, "error");
+
+        await moveToTestDir();
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "check", "foo"]);
+
+        expect(console.error).toHaveBeenCalledWith("could not find utility with name foo");
+    });
+
+    test("check command: checksum matches.", async () => {
+        vi.spyOn(console, "error");
+
+        const testDirPath = await moveToTestDir();
+
+        const cmd = addCommands(new Command());
+        await fs.mkdir(path.join(testDirPath, "foo"));
+        await fs.writeFile(path.join(testDirPath, "foo", "index.ts"), "console.log('hello world')");
+        process.chdir("./foo");
+        await cmd.parseAsync(["node", "verde", "init", "foo"]);
+        process.chdir("..");
+
+        const utilFileBeforeCheck = await readJSON<UtilityFile>("./foo/utils.json");
+
+        await cmd.parseAsync(["node", "verde", "check", "foo"]);
+
+        const utilFileAfterCheck = await readJSON<UtilityFile>("./foo/utils.json");
+
+        expect(utilFileBeforeCheck.hash).toBe(utilFileAfterCheck.hash);
+    });
+
+    test("check command: checksum mismatch.", async () => {
+        vi.spyOn(console, "error");
+
+        const testDirPath = await moveToTestDir();
+
+        const cmd = addCommands(new Command());
+        await fs.mkdir(path.join(testDirPath, "foo"));
+        await fs.writeFile(path.join(testDirPath, "foo", "index.ts"), "console.log('hello world')");
+        process.chdir("./foo");
+        await cmd.parseAsync(["node", "verde", "init", "foo"]);
+        await fs.writeFile(path.join(testDirPath, "foo", "index2.ts"), "console.log('this file changes the hash')");
+        process.chdir("..");
+
+        const utilFileBeforeCheck = await readJSON<UtilityFile>("./foo/utils.json");
+
+        await cmd.parseAsync(["node", "verde", "check", "foo"]);
+
+        const utilFileAfterCheck = await readJSON<UtilityFile>("./foo/utils.json");
+
+        expect(utilFileBeforeCheck.hash).not.toBe(utilFileAfterCheck.hash);
     });
 });

@@ -8,7 +8,7 @@ import {
     storeObjectInCwd,
 } from "./fs";
 import { join, basename } from "path";
-import { type UtilityFile, parseUtilityFileFromBuffer, markUtilityFileAsPrivate, markUtilityAsPublic } from "./utility";
+import { type UtilityFile, markUtilityFileAsPrivate, markUtilityAsPublic, updateUtilityHash } from "./utility";
 import { hashBuffersWithSha256 } from "./crypto";
 import { checkIfNameIsAvailable } from "./github";
 
@@ -114,4 +114,32 @@ export const revealUtilityInProject = async (name: string) => {
     const nextUtilityFile = markUtilityAsPublic(util.configFile);
     await storeObjectInCwd<UtilityFile>(join(util.path, configFilename), nextUtilityFile);
     console.log("done!");
+};
+
+export const checkUtility = async (name: string) => {
+    const util = await getUtilityByName(name);
+
+    if (!util) {
+        console.error(`could not find utility with name ${name}`);
+        return;
+    }
+
+    console.log(`found ${name} computing it's file hash...`);
+
+    const previousHash = util.configFile.hash || "";
+
+    const utilFilePaths = util.files.filter(f => basename(f) !== configFilename);
+    const files = await readFiles(utilFilePaths);
+    const currentHash = hashBuffersWithSha256(files);
+
+    if (previousHash !== currentHash) {
+        console.log(`${name} hash mismatch, updating on disk config file...`);
+        await storeObjectInCwd<UtilityFile>(
+            join(util.path, configFilename),
+            updateUtilityHash(util.configFile, currentHash),
+        );
+        return;
+    }
+
+    console.log(`${name} hash match!.`);
 };

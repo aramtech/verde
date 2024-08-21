@@ -6,6 +6,7 @@ import {
     listUtilitiesInProject,
     hideUtilityInProject,
     revealUtilityInProject,
+    checkUtility,
 } from "./project";
 
 const addListToProgram = (program: Command) =>
@@ -45,12 +46,20 @@ const addRevealCommand = (program: Command) =>
         await revealUtilityInProject(name);
     });
 
+const addCheckCommand = (program: Command) =>
+    program.command("check [name]").action(async name => {
+        if (name) {
+            await checkUtility(name);
+        }
+    });
+
 export const addCommands = (program: Command) => {
     addInitCommand(program);
     addListToProgram(program);
     addRemoveUtilityCommand(program);
     addHideCommand(program);
     addRevealCommand(program);
+    addCheckCommand(program);
 
     return program;
 };
