@@ -51,6 +51,7 @@ const addCheckCommand = (program: Command) =>
     program.command("check [name]").action(async (name?: string) => {
         if (name) {
             await checkUtility(name);
+            return;
         }
 
         await checkAllUtilities();
