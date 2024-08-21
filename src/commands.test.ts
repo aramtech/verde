@@ -8,7 +8,7 @@ import path from "path";
 import { readJSON } from "./fs";
 import { type UtilityFile } from "./utility";
 
-describe("cli.ts", () => {
+describe("CLI", () => {
     let originalCwd: string = process.cwd();
 
     beforeAll(async () => {
@@ -183,5 +183,43 @@ describe("cli.ts", () => {
         const utilFile = await readJSON<UtilityFile>("./foo-util/utils.json");
 
         expect(utilFile.private).toBe(true);
+    });
+
+    test("reveal command: no matching utility found.", async () => {
+        vi.spyOn(console, "error");
+
+        const testDirPath = await moveToTestDir();
+
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
+
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "reveal", "baz"]);
+
+        expect(console.error).toHaveBeenCalledWith("could not find utility with name baz");
+    });
+
+    test("reveal command: should update the config file of the utility.", async () => {
+        vi.spyOn(console, "error");
+
+        const testDirPath = await moveToTestDir();
+
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
+
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "reveal", "foo"]);
+
+        expect(console.error).not.toHaveBeenCalledWith("could not find utility with name foo");
+
+        const utilFile = await readJSON<UtilityFile>("./foo-util/utils.json");
+
+        expect(utilFile.private).toBe(false);
     });
 });

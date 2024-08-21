@@ -50,6 +50,7 @@ export const addCommands = (program: Command) => {
     addListToProgram(program);
     addRemoveUtilityCommand(program);
     addHideCommand(program);
+    addRevealCommand(program);
 
     return program;
 };
