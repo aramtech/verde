@@ -1,16 +1,18 @@
+import { basename, join } from "path";
+import { hashBuffersWithSha256 } from "./crypto";
 import {
     collectDirsWithFile,
     collectFilePathsIn,
+    find_project_root,
     isStoredOnDisk,
     readFiles,
     readJSON,
     removeDir,
     storeObjectInCwd,
 } from "./fs";
-import { join, basename } from "path";
-import { type UtilityFile, parseUtilityFileFromBuffer } from "./utility";
-import { hashBuffersWithSha256 } from "./crypto";
 import { checkIfNameIsAvailable } from "./github";
+import logger from "./logger";
+import { type UtilityFile } from "./utility";
 
 const configFilename = "utils.json";
 
@@ -19,8 +21,8 @@ type UtilityDescription = {
     path: string;
     files: string[];
 };
-
-export const listUtilitiesInProject = async (projectPath: string): Promise<UtilityDescription[]> => {
+const project_root = await find_project_root();
+export const listUtilitiesInDirectory = async (projectPath: string = project_root): Promise<UtilityDescription[]> => {
     const traverseResult = await collectDirsWithFile(projectPath, {
         exclude: ["node_modules", ".git"],
         configFilename: configFilename,
@@ -44,6 +46,17 @@ export const listUtilitiesInProject = async (projectPath: string): Promise<Utili
 export const initNewUtility = async (name: string, description: string) => {
     if (await isStoredOnDisk(configFilename)) {
         console.error("directory already managed by verde!.");
+        return;
+    }
+
+    const utils = await listUtilitiesInDirectory(".");
+
+    if (utils.length) {
+        logger.fatal(
+            "this directory contains sub utilities",
+            "\n",
+            utils.map(u => `${u.configFile.name}: ${u.path}`).join("\n"),
+        );
         return;
     }
 
@@ -73,8 +86,8 @@ export const initNewUtility = async (name: string, description: string) => {
     });
 };
 
-export const removeUtilityFromProject = async (projectPath: string, name: string) => {
-    const utils = await listUtilitiesInProject(projectPath);
+export const removeUtilityFromProject = async (name: string, projectPath = project_root) => {
+    const utils = await listUtilitiesInDirectory(projectPath);
 
     for (const util of utils) {
         if (util.configFile.name === name) {

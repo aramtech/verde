@@ -11,6 +11,9 @@
     "prettier": "^3.3.3",
     "vitest": "^2.0.5"
   },
+  "bin": {
+    "verde": "./src/main.ts"
+  },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
@@ -23,7 +26,12 @@
     "printWidth": 120
   },
   "dependencies": {
-    "commander": "^12.1.0"
+    "@octokit/rest": "^21.0.2",
+    "axios": "^1.7.4",
+    "commander": "^12.1.0",
+    "enquirer": "^2.4.1",
+    "install": "^0.13.0",
+    "ora": "^8.0.1"
   },
   "jest": {
     "resetModules": true,

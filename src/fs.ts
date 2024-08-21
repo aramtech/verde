@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import logger from "./logger";
 
 export type CollectOpts = {
     configFilename: string;
@@ -35,7 +36,7 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
     const { exclude, configFilename } = opts;
     const basename = path.basename(initialPath);
 
-    if (exclude.includes(basename)) {
+    if (exclude.find(e => initialPath.includes(e))) {
         return [];
     }
 
@@ -80,3 +81,26 @@ export const readJSON = async <T>(path: string) => {
 };
 
 export const removeDir = async (p: string) => await fs.rmdir(p, { recursive: true });
+
+
+let project_root: null | string = null;
+export async function find_project_root(currentDir = path.resolve(".")) {
+    if (project_root) {
+        return project_root;
+    }
+
+    const packagePath = path.join(currentDir, "package.json");
+
+    if (await fs.exists(packagePath)) {
+        project_root = currentDir;
+        return currentDir;
+    }
+
+    const parentDir = path.dirname(currentDir);
+
+    if (parentDir === currentDir) {
+        logger.fatal("No package.json file found in any parent directory.");
+    }
+
+    return find_project_root(parentDir);
+}
