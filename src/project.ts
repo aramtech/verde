@@ -131,6 +131,7 @@ export const revealUtilityInProject = async (name: string) => {
 };
 
 export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
+    logger.log(`looking for utility "${nameOrDesc}"`);
     const util = typeof nameOrDesc === "string" ? await getUtilityByName(nameOrDesc) : nameOrDesc;
 
     if (!util) {
@@ -138,7 +139,7 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
         process.exit(1);
     }
 
-    console.log(`found ${util.configFile.name} computing it's file hash...`);
+    console.log(`found utility "${util.configFile.name}" computing it's file hash...`);
 
     const previousHash = util.configFile.hash || "";
 
@@ -158,7 +159,7 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
             match: currentHash == previousHash,
         };
     }
-    console.log(`${util.configFile.name} hash match!. no changes detected`);
+    console.log(`utility "${util.configFile.name}" hash match!. no changes detected`);
 
     return {
         currentHash,

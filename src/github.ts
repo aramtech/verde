@@ -7,8 +7,9 @@ import url from "url";
 import { command_on_system, run_command } from "./exec.js";
 import { find_project_root } from "./fs.ts";
 import { default as Logger, default as logger } from "./logger.js";
-import { listUtilitiesInDirectory } from "./project.ts";
+import { checkUtility, listUtilitiesInDirectory } from "./project.ts";
 import { read_answer_to, read_choice } from "./prompt.js";
+import { get_combined, validate_utility_name, validate_utility_version } from "./utility.ts";
 
 export const checkIfNameIsAvailable = async (name: string) => {
     const utils = await listUtilitiesInDirectory(await find_project_root());
@@ -298,12 +299,12 @@ export const get_token_for_org = async (org_name: string) => {
     return github_personal_access_token;
 };
 
-export const get_files_with_github_api = async (repo_name: string, branch: string, new_project_path: string) => {
+export const get_files_with_github_api = async (full_repo_name: string, branch: string, new_project_path: string) => {
     if (!command_on_system("tar")) {
         Logger.fatal('please install "tar" extraction command line');
     }
-    const github_personal_access_token = await get_token_for_repo(repo_name);
-    await download_repo_files(repo_name, branch, github_personal_access_token, new_project_path);
+    const github_personal_access_token = await get_token_for_repo(full_repo_name);
+    await download_repo_files(full_repo_name, branch, github_personal_access_token, new_project_path);
 };
 
 let octokit: Octokit | null = null;
@@ -315,6 +316,23 @@ export const get_octokit_client_for_org = async () => {
 
     const client = new Octokit({
         auth: record.token,
+        log: {
+            info(message) {
+                logger.log(message);
+            },
+            error(message) {
+                if (message.match(/\b404\b/)) {
+                    return;
+                }
+                logger.error(message);
+            },
+            debug(message) {
+                // console.debug(message);
+            },
+            warn(message) {
+                logger.warning(message);
+            },
+        },
     });
     octokit = client;
     return client;
@@ -366,6 +384,134 @@ export async function create_repository_in_org(org: string, repo: string) {
     }
 }
 
+async function list_branches(owner: string, repo: string) {
+    const octokit = await get_octokit_client_for_org();
+    try {
+        const { data: branches } = await octokit.repos.listBranches({
+            owner,
+            repo,
+        });
+
+        return branches;
+    } catch (error: any) {
+        logger.fatal(`Error listing branches: ${error.message}`);
+    }
+}
+
+export async function get_utility_versions(owner: string, utility: string) {
+    const branches = await list_branches(owner, utility);
+    if (branches) {
+        const versions_branches = branches
+            .map(b => {
+                try {
+                    const v = validate_utility_version(b.name, false);
+                    return v;
+                } catch (error) {
+                    return null;
+                }
+            })
+            .filter(v => !!v)
+            .sort((a, b) => {
+                if (a.combined > b.combined) {
+                    return 1;
+                } else if (a.combined < b.combined) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            });
+        return versions_branches;
+    }
+    return [];
+}
+
+export async function create_branch_if_not_exists(owner: string, repo: string, branch: string, baseBranch = "0.1.0") {
+    const octokit = await get_octokit_client_for_org();
+    try {
+        // Check if the branch exists
+        await octokit.repos.getBranch({
+            owner,
+            repo,
+            branch,
+        });
+        console.log(`Branch ${branch} already exists.`);
+    } catch (error: any) {
+        if (error.status === 404) {
+            // Branch does not exist, create it from the base branch
+            const { data: baseBranchData } = await octokit.repos.getBranch({
+                owner,
+                repo,
+                branch: baseBranch,
+            });
+
+            await octokit.git.createRef({
+                owner,
+                repo,
+                ref: `refs/heads/${branch}`,
+                sha: baseBranchData.commit.sha,
+            });
+
+            console.log(`Branch ${branch} created from ${baseBranch}.`);
+        } else {
+            throw error;
+        }
+    }
+}
+
+async function delete_file_from_repo(owner: string, repo: string, file_path: string, branch: string) {
+    try {
+        const octokit = await get_octokit_client_for_org();
+        const { data: file } = await octokit.repos.getContent({
+            owner,
+            repo,
+            path: file_path,
+            ref: branch,
+        });
+
+        await octokit.repos.deleteFile({
+            owner,
+            repo,
+            path: file_path,
+            message: `Delete ${file_path}`,
+            sha: (file as any).sha,
+            branch,
+        });
+
+        console.log(`Deleted file: ${file_path}`);
+    } catch (error) {
+        logger.fatal(`Error deleting file ${file_path}:`, error);
+    }
+}
+
+async function list_files_in_repo(owner: string, repo: string, branch: string, repoPath = "") {
+    try {
+        const octokit = await get_octokit_client_for_org();
+        const { data: contents } = await octokit.repos.getContent({
+            owner,
+            repo,
+            path: repoPath,
+            ref: branch,
+        });
+
+        let files: string[] = [];
+
+        for (const item of contents as any[]) {
+            if (item.type === "file") {
+                files.push(item.path);
+            } else if (item.type === "dir") {
+                files = files.concat(await list_files_in_repo(owner, repo, branch, item.path));
+            }
+        }
+
+        return files;
+    } catch (error: any) {
+        if (error.status === 404) {
+            return [];
+        }
+        throw error;
+    }
+}
+
 async function upload_file_to_repo(owner: string, repo: string, fileContent: string, branch: string, repoPath: string) {
     const octokit = await get_octokit_client_for_org();
     try {
@@ -376,7 +522,6 @@ async function upload_file_to_repo(owner: string, repo: string, fileContent: str
             path: repoPath,
             ref: branch,
         });
-
         // Update the existing file
         await octokit.repos.createOrUpdateFileContents({
             owner,
@@ -392,14 +537,18 @@ async function upload_file_to_repo(owner: string, repo: string, fileContent: str
     } catch (error: any) {
         if (error.status === 404) {
             // File does not exist, create a new one
-            await octokit.repos.createOrUpdateFileContents({
-                owner,
-                repo,
-                path: repoPath,
-                message: `Add ${repoPath}`,
-                content: fileContent,
-                branch,
-            });
+            try {
+                await octokit.repos.createOrUpdateFileContents({
+                    owner,
+                    repo,
+                    path: repoPath,
+                    message: `Add ${repoPath}`,
+                    content: fileContent,
+                    branch,
+                });
+            } catch (error) {
+                logger.fatal("reupload for new file error", error);
+            }
 
             console.log(`Created new file: ${repoPath}`);
         } else {
@@ -416,6 +565,7 @@ export async function upload_directory_to_repo(
     repoPath = "",
 ) {
     const items = fs.readdirSync(localDir);
+    const filesToUpload: string[] = [];
 
     const uploadPromises = items.map(async item => {
         const localItemPath = path.join(localDir, item);
@@ -424,15 +574,175 @@ export async function upload_directory_to_repo(
         const stats = fs.statSync(localItemPath);
 
         if (stats.isDirectory()) {
-            // If the item is a directory, recurse into it
             return upload_directory_to_repo(owner, repo, localItemPath, branch, repoItemPath);
         } else if (stats.isFile()) {
-            // If the item is a file, read it and upload
             const fileContent = fs.readFileSync(localItemPath, { encoding: "base64" });
-            return upload_file_to_repo(owner, repo, fileContent, branch, repoItemPath);
+            filesToUpload.push(repoItemPath);
+            return await upload_file_to_repo(owner, repo, fileContent, branch, repoItemPath);
         }
     });
 
-    // Wait for all uploads in the current directory to complete
     await Promise.all(uploadPromises);
+
+    // Compare with existing files and delete those that are not in the new push
+    const existingFiles = await list_files_in_repo(owner, repo, branch, repoPath);
+    const filesToDelete = existingFiles.filter(file => !filesToUpload.includes(file));
+
+    const deletePromises = filesToDelete.map(file => delete_file_from_repo(owner, repo, file, branch));
+    await Promise.all(deletePromises);
 }
+
+export const get_file_from_repo = async (owner: string, repo: string, repo_file_path: string, branch: string) => {
+    try {
+        const octokit = await get_octokit_client_for_org();
+        const { data: existingFile } = await octokit.repos.getContent({
+            owner,
+            repo,
+            path: repo_file_path,
+            ref: branch,
+        });
+
+        return existingFile;
+    } catch (error: any) {
+        if (error.status == 404) {
+            return null;
+        } else {
+            logger.fatal(
+                "Error occurred while loading file\nparameters:",
+                {
+                    owner,
+                    repo_file_path,
+                    repo,
+                    branch,
+                },
+                "\n",
+                error,
+            );
+            return null;
+        }
+    }
+};
+
+type SingleGithubFile = {
+    name: string;
+    path: string;
+    sha: string;
+    size: number;
+    url: string;
+    html_url: string;
+    git_url: string;
+    download_url: string;
+    type: string;
+    content: string;
+    encoding: string;
+    _links: {
+        self: string;
+        git: string;
+        html: string;
+    };
+};
+
+export const push_utility = async (utility_name: string) => {
+    /**
+     * - make sure utility actually exists --
+     * - validate version number --
+     * - validate utility name --
+     * - check if remote repo exists
+     *   - if so --
+     *     - create the remote repo and --
+     *     - push content --
+     *   - if not
+     *     - pull remote utility branches
+     *     - get the latest branch number
+     *       - sort branches
+     *       - get latest
+     *
+     *     - compare versions
+     *       - if current greater than remote push baby push
+     *       - if current equals the remote --
+     *         - if hash's are equal prompt "up to date" --
+     *         - if hash's are not equal prompt "did you update the version code? if not update the version code and try again." --
+     *         - exit --
+     *       - if current less than remote prompt that you are not up to date remote version is greater --
+     *
+     */
+
+    const utils = await listUtilitiesInDirectory(await find_project_root());
+
+    const util = utils.find(u => u.configFile.name == utility_name);
+
+    if (!util) {
+        logger.fatal('utility named "', utility_name, '" is not found');
+        return;
+    }
+    const hash = await checkUtility(util.configFile.name);
+    util.configFile.hash = hash.currentHash;
+
+    if (util.configFile.private) {
+        logger.log(`this utility ${utility_name} is private it cannot be uploaded`);
+        return;
+    }
+
+    validate_utility_version(util.configFile.version || "");
+    validate_utility_name(util.configFile.name);
+
+    const record = await get_org_name_and_token();
+    const result = await check_if_repository_exists_in_org(record.org_name, util.configFile.name);
+    const push = async () => {
+        await upload_directory_to_repo(record.org_name, utility_name, util.path, util.configFile.version || "0.1.0");
+    };
+    if (result) {
+        const utility_versions = await get_utility_versions(record.org_name, util.configFile.name);
+        const last_version = utility_versions.at(-1);
+        if (last_version) {
+            const local_util_combined_version = get_combined(util.configFile.version || "0.0.0");
+
+            if (last_version.combined < local_util_combined_version) {
+                await create_branch_if_not_exists(
+                    record.org_name,
+                    util.configFile.name,
+                    util.configFile.version || "0.1.0",
+                    last_version.version,
+                );
+                return await push();
+            } else if (last_version.combined > local_util_combined_version) {
+                logger.log(
+                    `utility ${utility_name} remote version (${last_version.version}) is greater than the local version ${util.configFile.version}`,
+                );
+                return;
+            } else {
+                const last_remote_config_file = (await get_file_from_repo(
+                    record.org_name,
+                    util.configFile.name,
+                    "utils.json",
+                    last_version.version,
+                )) as SingleGithubFile | null;
+                if (!last_remote_config_file) {
+                    logger.fatal("Error loading utility config file from remote source for utility (file not found)", {
+                        utility: last_version.version,
+                        name: util.configFile.name,
+                    });
+                    return;
+                }
+                const remote_util_config: typeof util.configFile = JSON.parse(
+                    Buffer.from(last_remote_config_file.content, "base64").toString("utf-8"),
+                );
+
+                if (remote_util_config.hash != util.configFile.hash) {
+                    logger.warning(
+                        `utility: ${util.configFile.name} ,` +
+                            "remote content last version equalt local, but the content is different are you sure you updated the version?",
+                    );
+                } else {
+                    logger.success(`utility ${util.configFile.name} is up to date: ${util.configFile.version}`);
+                }
+                process.exit(0);
+            }
+        } else {
+            return await push();
+        }
+    } else {
+        await create_repository_in_org(record.org_name, utility_name);
+        await push();
+    }
+};
