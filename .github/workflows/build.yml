@@ -1,0 +1,21 @@
+name: Build executable
+
+on: "workflow_call"
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: oven-sh/setup-bun@v2
+
+            - uses: actions/cache@v4
+              with:
+                  path: node_modules
+                  key: ${{ runner.os }}-node-modules-cache
+
+            - name: Build executable with bun
+              run: |
+                  bun install
+                  bun build ./src/main.ts --compile --outfile verde

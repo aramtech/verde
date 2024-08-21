@@ -18,14 +18,12 @@ jobs:
                   path: node_modules
                   key: ${{ runner.os }}-node-modules-cache
 
-            - name: Restore node modules from cache
-              uses: actions/cache@v3
-              with:
-                  path: node_modules
-                  key: ${{ runner.os }}-bun-linux-${{ hashFiles('**/bun.lockb') }}
-                  restore-keys: ${{ runner.os }}-bun-linux-
-
             - run: bun install
             - run: bunx prettier . --check
             - run: bunx tsc --noEmit
             - run: bunx vitest
+
+    build-exe:
+        needs: install-and-test
+        uses: ./.github/workflows/build.yml
+        secrets: inherit
