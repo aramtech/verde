@@ -146,4 +146,42 @@ describe("cli.ts", () => {
         expect(await fs.exists(path.join(testDirPath, "bar-util"))).toBe(true);
         expect(await fs.exists(path.join(testDirPath, "baz-util"))).toBe(false);
     });
+
+    test("hide command: no matching utility found.", async () => {
+        vi.spyOn(console, "error");
+
+        const testDirPath = await moveToTestDir();
+
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
+
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "hide", "baz"]);
+
+        expect(console.error).toHaveBeenCalledWith("could not find utility with name baz");
+    });
+
+    test("hide command: should update the config file of the utility.", async () => {
+        vi.spyOn(console, "error");
+
+        const testDirPath = await moveToTestDir();
+
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
+
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "hide", "foo"]);
+
+        expect(console.error).not.toHaveBeenCalledWith("could not find utility with name foo");
+
+        const utilFile = await readJSON<UtilityFile>("./foo-util/utils.json");
+
+        expect(utilFile.private).toBe(true);
+    });
 });
