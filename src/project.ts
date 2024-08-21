@@ -85,9 +85,13 @@ export const removeUtilityFromProject = async (projectPath: string, name: string
     }
 };
 
-export const hideUtilityInProject = async (projectPath: string, name: string) => {
-    const utils = await listUtilitiesInProject(projectPath);
-    const util = utils.find(u => u.configFile.name === name);
+const getUtilityByName = async (name: string): Promise<UtilityDescription | undefined> => {
+    const utils = await listUtilitiesInProject(".");
+    return utils.find(u => u.configFile.name === name);
+};
+
+export const hideUtilityInProject = async (name: string) => {
+    const util = await getUtilityByName(name);
 
     if (!util) {
         console.error(`could not find utility with name ${name}`);
@@ -99,9 +103,8 @@ export const hideUtilityInProject = async (projectPath: string, name: string) =>
     console.log("done!");
 };
 
-export const revealUtilityInProject = async (projectPath: string, name: string) => {
-    const utils = await listUtilitiesInProject(projectPath);
-    const util = utils.find(u => u.configFile.name === name);
+export const revealUtilityInProject = async (name: string) => {
+    const util = await getUtilityByName(name);
 
     if (!util) {
         console.error(`could not find utility with name ${name}`);

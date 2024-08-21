@@ -37,12 +37,12 @@ const addRemoveUtilityCommand = (program: Command) =>
 
 const addHideCommand = (program: Command) =>
     program.command("hide <name>").action(async name => {
-        await hideUtilityInProject(".", name);
+        await hideUtilityInProject(name);
     });
 
 const addRevealCommand = (program: Command) =>
     program.command("reveal <name>").action(async name => {
-        await revealUtilityInProject(".", name);
+        await revealUtilityInProject(name);
     });
 
 export const addCommands = (program: Command) => {
