@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fs from "fs";
 import path from "path";
 import logger from "./logger";
 
@@ -14,11 +14,11 @@ export type CollectResult = {
 };
 
 export const collectFilePathsIn = async (dir: string) => {
-    const contents = await fs.readdir(dir);
+    const contents = await fs.readdirSync(dir);
     let results: string[] = [];
 
     for (const c of contents) {
-        const stats = await fs.stat(path.join(dir, c));
+        const stats = await fs.statSync(path.join(dir, c));
 
         if (stats.isDirectory()) {
             const gotten = await collectFilePathsIn(path.join(dir, c));
@@ -40,13 +40,13 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
         return [];
     }
 
-    const pathStats = await fs.stat(initialPath);
+    const pathStats = await fs.statSync(initialPath);
 
     if (!pathStats.isDirectory()) {
         return [];
     }
 
-    const contents = await fs.readdir(initialPath);
+    const contents = await fs.readdirSync(initialPath);
 
     if (contents.find(x => x === configFilename)) {
         const fullContents = await collectFilePathsIn(initialPath);
@@ -57,7 +57,7 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
 
     for (const c of contents) {
         const fullPath = path.join(initialPath, c);
-        const stats = await fs.stat(fullPath);
+        const stats = await fs.statSync(fullPath);
 
         if (stats.isDirectory()) {
             const gotten = await collectDirsWithFile(fullPath, opts);
@@ -68,20 +68,23 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
     return results;
 };
 
-export const readFiles = async (paths: string[]) => await Promise.all(paths.map(f => fs.readFile(f)));
+export const readFiles = async (paths: string[]) => await Promise.all(paths.map(f => fs.readFileSync(f)));
 
 export const storeObjectInCwd = async <T>(nameOrPath: string, object: T) =>
-    await fs.writeFile(nameOrPath, JSON.stringify(object));
+    await fs.writeFileSync(nameOrPath, JSON.stringify(object));
 
-export const isStoredOnDisk = async (nameOrPath: string) => await fs.exists(nameOrPath);
+export const isStoredOnDisk = async (nameOrPath: string) => await fs.existsSync(nameOrPath);
 
 export const readJSON = async <T>(path: string) => {
-    const contents = await fs.readFile(path);
+    const contents = await fs.readFileSync(path);
     return JSON.parse(contents.toString("utf-8")) as T;
 };
 
-export const removeDir = async (p: string) => await fs.rmdir(p, { recursive: true });
+export async function is_valid_relative_path(path: string) {
+    return !!path.match(/^(?:[_a-zA-Z\-][_a-zA-Z0-9\-]*)(?:\/[_a-zA-Z\-][_a-zA-Z0-9\-]*)*\/?$/);
+}
 
+export const removeDir = async (p: string) => fs.rmdirSync(p, { recursive: true });
 
 let project_root: null | string = null;
 export async function find_project_root(currentDir = path.resolve(".")) {
@@ -91,7 +94,7 @@ export async function find_project_root(currentDir = path.resolve(".")) {
 
     const packagePath = path.join(currentDir, "package.json");
 
-    if (await fs.exists(packagePath)) {
+    if (await fs.existsSync(packagePath)) {
         project_root = currentDir;
         return currentDir;
     }

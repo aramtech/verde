@@ -23,7 +23,11 @@ type UtilityDescription = {
     files: string[];
 };
 const project_root = await find_project_root();
+let utilities_cache: UtilityDescription[] | null = null;
 export const listUtilitiesInDirectory = async (projectPath: string = project_root): Promise<UtilityDescription[]> => {
+    if (projectPath == project_root && utilities_cache) {
+        return utilities_cache;
+    }
     const traverseResult = await collectDirsWithFile(projectPath, {
         exclude: ["node_modules", ".git", "dist"],
         configFilename: configFilename,
@@ -39,6 +43,10 @@ export const listUtilitiesInDirectory = async (projectPath: string = project_roo
             files: tr.contents,
             path: tr.dirPath,
         });
+    }
+
+    if (projectPath == project_root) {
+        utilities_cache = descArr;
     }
 
     return descArr;
@@ -81,6 +89,7 @@ export const initNewUtility = async (name: string, description: string) => {
     await storeObjectInCwd<UtilityFile>(configFilename, {
         name,
         deps: {},
+        private: false,
         hash,
         version: "0.1.0",
         description,
@@ -99,7 +108,7 @@ export const removeUtilityFromProject = async (name: string, projectPath = proje
     }
 };
 
-const getUtilityByName = async (name: string): Promise<UtilityDescription | undefined> => {
+export const getUtilityByName = async (name: string): Promise<UtilityDescription | undefined> => {
     const utils = await listUtilitiesInDirectory(await find_project_root());
     return utils.find(u => u.configFile.name === name);
 };
@@ -167,7 +176,7 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
         match: currentHash == previousHash,
     };
 };
-const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
+export const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
     let result: T[][] = [];
     let currentChunk: T[] = [];
 

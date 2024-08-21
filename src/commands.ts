@@ -1,7 +1,5 @@
 import type { Command } from "commander";
-import {
-    push_utility
-} from "./github";
+import { pull_all_utilities, pull_utility, push_utility } from "./github";
 import { listUtilitiesInDirectory, pushAllUtilities } from "./project";
 
 import {
@@ -12,6 +10,7 @@ import {
     removeUtilityFromProject,
     revealUtilityInProject,
 } from "./project";
+import { validate_utility_version } from "./utility";
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
@@ -68,12 +67,37 @@ const addCheckCommand = (program: Command) =>
         await checkAllUtilities();
     });
 
+const addPullCommand = (program: Command) =>
+    program
+        .command("pull [name]")
+        .option("-v, --version <version>")
+        .action(
+            async (
+                name: string | undefined,
+                options: {
+                    version?: string;
+                },
+            ) => {
+                const { version } = options;
+                if (version) {
+                    validate_utility_version(version);
+                }
+
+                if (name) {
+                    await pull_utility(name, version);
+                    return;
+                }
+
+                await pull_all_utilities();
+            },
+        );
+
 export const addCommands = (program: Command) => {
     addInitCommand(program);
     addListToProgram(program);
     addRemoveUtilityCommand(program);
     addPushUtilityCommand(program);
-
+    addPullCommand(program);
     addHideCommand(program);
     addRevealCommand(program);
     addCheckCommand(program);

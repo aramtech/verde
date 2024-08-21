@@ -32,7 +32,7 @@ export const warning = (...message: any[]) => {
 };
 
 export const fatal = (...message: any[]) => {
-    error(...message);
+    console.log(...message);
     process.exit(1);
 };
 export const log = (...message: any[]) => {

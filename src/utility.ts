@@ -1,12 +1,12 @@
 import logger from "./logger";
 
-export type UtilityFile = { name: string } & Partial<{
+export type UtilityFile = { name: string } & {
     version: string;
     deps: Record<string, string>;
     hash: string;
     private: boolean;
     description: string;
-}>;
+};
 
 export const parseUtilityFileFromBuffer = (buff: Buffer) => {
     const parsed = JSON.parse(buff.toString("utf-8"));
