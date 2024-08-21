@@ -7,6 +7,7 @@ import {
     hideUtilityInProject,
     revealUtilityInProject,
     checkUtility,
+    checkAllUtilities,
 } from "./project";
 
 const addListToProgram = (program: Command) =>
@@ -47,10 +48,12 @@ const addRevealCommand = (program: Command) =>
     });
 
 const addCheckCommand = (program: Command) =>
-    program.command("check [name]").action(async name => {
+    program.command("check [name]").action(async (name?: string) => {
         if (name) {
             await checkUtility(name);
         }
+
+        await checkAllUtilities();
     });
 
 export const addCommands = (program: Command) => {

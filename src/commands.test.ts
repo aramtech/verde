@@ -275,4 +275,92 @@ describe("CLI", () => {
 
         expect(utilFileBeforeCheck.hash).not.toBe(utilFileAfterCheck.hash);
     });
+
+    test("check all command: no utilities found in project.", async () => {
+        vi.spyOn(console, "error");
+
+        await moveToTestDir();
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "check"]);
+
+        expect(console.error).not.toHaveBeenCalled();
+    });
+
+    test("check all command: all checksums match.", async () => {
+        vi.spyOn(console, "log");
+
+        const testDirPath = await moveToTestDir();
+
+        const cmd = addCommands(new Command());
+
+        let i = 50;
+
+        while (i > 0) {
+            const name = `foo-${i}`;
+
+            await fs.mkdir(path.join(testDirPath, name));
+            await fs.writeFile(path.join(testDirPath, name, "index.ts"), "console.log('hello world')");
+            process.chdir(`./${name}`);
+            await cmd.parseAsync(["node", "verde", "init", name]);
+
+            i--;
+            process.chdir("..");
+        }
+
+        await cmd.parseAsync(["node", "verde", "check"]);
+
+        i = 50;
+
+        while (i > 0) {
+            const name = `foo-${i}`;
+            expect(console.log).toHaveBeenCalledWith(`${name} hash match!.`);
+            i--;
+        }
+    });
+
+    test("check all command: half checksums do not match.", async () => {
+        vi.spyOn(console, "log");
+
+        const testDirPath = await moveToTestDir();
+
+        const cmd = addCommands(new Command());
+
+        let i = 50;
+
+        while (i > 0) {
+            const name = `foo-${i}`;
+
+            await fs.mkdir(path.join(testDirPath, name));
+            await fs.writeFile(path.join(testDirPath, name, "index.ts"), "console.log('hello world')");
+            process.chdir(`./${name}`);
+            await cmd.parseAsync(["node", "verde", "init", name]);
+
+            i--;
+            process.chdir("..");
+        }
+
+        i = 25;
+
+        while (i > 0) {
+            const name = `foo-${i}`;
+            process.chdir(`./${name}`);
+
+            await fs.writeFile(path.join(testDirPath, name, "index2.ts"), "console.log('should change stuff')");
+
+            i--;
+            process.chdir("..");
+        }
+
+        await cmd.parseAsync(["node", "verde", "check"]);
+
+        i = 25;
+
+        while (i > 0) {
+            const name = `foo-${i}`;
+            expect(console.log).toHaveBeenCalledWith(`${name} hash mismatch, updating on disk config file...`);
+
+            i--;
+            process.chdir("..");
+        }
+    });
 });

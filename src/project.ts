@@ -11,6 +11,7 @@ import { join, basename } from "path";
 import { type UtilityFile, markUtilityFileAsPrivate, markUtilityAsPublic, updateUtilityHash } from "./utility";
 import { hashBuffersWithSha256 } from "./crypto";
 import { checkIfNameIsAvailable } from "./github";
+import { CPU_COUNT } from "./os";
 
 const configFilename = "utils.json";
 
@@ -116,15 +117,15 @@ export const revealUtilityInProject = async (name: string) => {
     console.log("done!");
 };
 
-export const checkUtility = async (name: string) => {
-    const util = await getUtilityByName(name);
+export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
+    const util = typeof nameOrDesc === "string" ? await getUtilityByName(nameOrDesc) : nameOrDesc;
 
     if (!util) {
-        console.error(`could not find utility with name ${name}`);
+        console.error(`could not find utility with name ${nameOrDesc}`);
         return;
     }
 
-    console.log(`found ${name} computing it's file hash...`);
+    console.log(`found ${util.configFile.name} computing it's file hash...`);
 
     const previousHash = util.configFile.hash || "";
 
@@ -133,7 +134,7 @@ export const checkUtility = async (name: string) => {
     const currentHash = hashBuffersWithSha256(files);
 
     if (previousHash !== currentHash) {
-        console.log(`${name} hash mismatch, updating on disk config file...`);
+        console.log(`${util.configFile.name} hash mismatch, updating on disk config file...`);
         await storeObjectInCwd<UtilityFile>(
             join(util.path, configFilename),
             updateUtilityHash(util.configFile, currentHash),
@@ -141,5 +142,34 @@ export const checkUtility = async (name: string) => {
         return;
     }
 
-    console.log(`${name} hash match!.`);
+    console.log(`${util.configFile.name} hash match!.`);
+};
+
+export const checkAllUtilities = async () => {
+    const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
+        let result: T[][] = [];
+        let currentChunk: T[] = [];
+
+        for (const item of arr) {
+            currentChunk.push(item);
+
+            if (currentChunk.length === chunkSize) {
+                result = [...result, currentChunk];
+                currentChunk = [];
+            }
+        }
+
+        if (currentChunk.length) {
+            result = [...result, currentChunk];
+        }
+
+        return result;
+    };
+
+    const utilities = await listUtilitiesInProject(".");
+    const chunked = chunkArr(utilities, CPU_COUNT);
+
+    for (const chunk of chunked) {
+        await Promise.all(chunk.map(c => checkUtility(c)));
+    }
 };
