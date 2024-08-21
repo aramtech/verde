@@ -12,3 +12,5 @@ export const parseUtilityFileFromBuffer = (buff: Buffer) => {
 };
 
 export const markUtilityFileAsPrivate = (f: UtilityFile): UtilityFile => ({ ...f, private: true });
+
+export const markUtilityAsPublic = (f: UtilityFile): UtilityFile => ({ ...f, private: false });
