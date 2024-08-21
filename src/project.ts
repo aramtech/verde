@@ -8,7 +8,7 @@ import {
     storeObjectInCwd,
 } from "./fs";
 import { join, basename } from "path";
-import { type UtilityFile, parseUtilityFileFromBuffer } from "./utility";
+import { type UtilityFile, parseUtilityFileFromBuffer, markUtilityFileAsPrivate } from "./utility";
 import { hashBuffersWithSha256 } from "./crypto";
 import { checkIfNameIsAvailable } from "./github";
 
@@ -83,4 +83,18 @@ export const removeUtilityFromProject = async (projectPath: string, name: string
             return;
         }
     }
+};
+
+export const hideUtilityInProject = async (projectPath: string, name: string) => {
+    const utils = await listUtilitiesInProject(projectPath);
+    const util = utils.find(u => u.configFile.name === name);
+
+    if (!util) {
+        console.error(`could not find utility with name ${name}`);
+        return;
+    }
+
+    const nextUtilityFile = markUtilityFileAsPrivate(util.configFile);
+    await storeObjectInCwd<UtilityFile>(join(util.path, configFilename), nextUtilityFile);
+    console.log("done!");
 };

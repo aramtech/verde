@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { removeUtilityFromProject, initNewUtility, listUtilitiesInProject } from "./project";
+import { removeUtilityFromProject, initNewUtility, listUtilitiesInProject, hideUtilityInProject } from "./project";
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
@@ -28,10 +28,16 @@ const addRemoveUtilityCommand = (program: Command) =>
         await removeUtilityFromProject(".", p);
     });
 
+const addHideCommand = (program: Command) =>
+    program.command("hide <name>").action(async name => {
+        await hideUtilityInProject(".", name);
+    });
+
 export const addCommands = (program: Command) => {
     addInitCommand(program);
     addListToProgram(program);
     addRemoveUtilityCommand(program);
+    addHideCommand(program);
 
     return program;
 };
