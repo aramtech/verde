@@ -7,8 +7,18 @@ import {
     upload_directory_to_repo,
 } from "./github";
 import logger from "./logger";
-import { initNewUtility, listUtilitiesInDirectory, removeUtilityFromProject } from "./project";
+import { listUtilitiesInDirectory } from "./project";
 import { validate_utility_name, validate_utility_version } from "./utility";
+
+
+import {
+    checkAllUtilities,
+    checkUtility,
+    hideUtilityInProject,
+    initNewUtility,
+    removeUtilityFromProject,
+    revealUtilityInProject,
+} from "./project";
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
@@ -89,10 +99,35 @@ const addPushUtilityCommand = (program: Command) =>
         }
     });
 
+const addHideCommand = (program: Command) =>
+    program.command("hide <name>").action(async name => {
+        await hideUtilityInProject(name);
+    });
+
+const addRevealCommand = (program: Command) =>
+    program.command("reveal <name>").action(async name => {
+        await revealUtilityInProject(name);
+    });
+
+const addCheckCommand = (program: Command) =>
+    program.command("check [name]").action(async (name?: string) => {
+        if (name) {
+            await checkUtility(name);
+            return;
+        }
+
+        await checkAllUtilities();
+    });
+
 export const addCommands = (program: Command) => {
     addInitCommand(program);
     addListToProgram(program);
     addRemoveUtilityCommand(program);
     addPushUtilityCommand(program);
+
+    addHideCommand(program);
+    addRevealCommand(program);
+    addCheckCommand(program);
+
     return program;
 };

@@ -51,3 +51,8 @@ export const validate_utility_name = (util_name: string) => {
     }
     return true;
 };
+export const markUtilityFileAsPrivate = (f: UtilityFile): UtilityFile => ({ ...f, private: true });
+
+export const markUtilityAsPublic = (f: UtilityFile): UtilityFile => ({ ...f, private: false });
+
+export const updateUtilityHash = (f: UtilityFile, nextHash: string): UtilityFile => ({ ...f, hash: nextHash });

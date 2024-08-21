@@ -12,7 +12,8 @@ import {
 } from "./fs";
 import { checkIfNameIsAvailable } from "./github";
 import logger from "./logger";
-import { type UtilityFile } from "./utility";
+import { CPU_COUNT } from "./os";
+import { type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash } from "./utility";
 
 const configFilename = "utils.json";
 
@@ -95,5 +96,92 @@ export const removeUtilityFromProject = async (name: string, projectPath = proje
             await removeDir(util.path);
             return;
         }
+    }
+};
+
+const getUtilityByName = async (name: string): Promise<UtilityDescription | undefined> => {
+    const utils = await listUtilitiesInDirectory(await find_project_root());
+    return utils.find(u => u.configFile.name === name);
+};
+
+export const hideUtilityInProject = async (name: string) => {
+    const util = await getUtilityByName(name);
+
+    if (!util) {
+        console.error(`could not find utility with name ${name}`);
+        return;
+    }
+
+    const nextUtilityFile = markUtilityFileAsPrivate(util.configFile);
+    await storeObjectInCwd<UtilityFile>(join(util.path, configFilename), nextUtilityFile);
+    console.log("done!");
+};
+
+export const revealUtilityInProject = async (name: string) => {
+    const util = await getUtilityByName(name);
+
+    if (!util) {
+        console.error(`could not find utility with name ${name}`);
+        return;
+    }
+
+    const nextUtilityFile = markUtilityAsPublic(util.configFile);
+    await storeObjectInCwd<UtilityFile>(join(util.path, configFilename), nextUtilityFile);
+    console.log("done!");
+};
+
+export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
+    const util = typeof nameOrDesc === "string" ? await getUtilityByName(nameOrDesc) : nameOrDesc;
+
+    if (!util) {
+        logger.fatal(`could not find utility with name ${nameOrDesc}`);
+        return;
+    }
+
+    console.log(`found ${util.configFile.name} computing it's file hash...`);
+
+    const previousHash = util.configFile.hash || "";
+
+    const utilFilePaths = util.files.filter(f => basename(f) !== configFilename);
+    const files = await readFiles(utilFilePaths);
+    const currentHash = hashBuffersWithSha256(files);
+
+    if (previousHash !== currentHash) {
+        console.log(`${util.configFile.name} hash mismatch, updating on disk config file...`);
+        await storeObjectInCwd<UtilityFile>(
+            join(util.path, configFilename),
+            updateUtilityHash(util.configFile, currentHash),
+        );
+        return;
+    }
+
+    console.log(`${util.configFile.name} hash match!. no changes detected`);
+};
+const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
+    let result: T[][] = [];
+    let currentChunk: T[] = [];
+
+    for (const item of arr) {
+        currentChunk.push(item);
+
+        if (currentChunk.length === chunkSize) {
+            result = [...result, currentChunk];
+            currentChunk = [];
+        }
+    }
+
+    if (currentChunk.length) {
+        result = [...result, currentChunk];
+    }
+
+    return result;
+};
+
+export const checkAllUtilities = async () => {
+    const utilities = await listUtilitiesInDirectory(await find_project_root());
+    const chunked = chunkArr(utilities, CPU_COUNT * 2);
+
+    for (const chunk of chunked) {
+        await Promise.all(chunk.map(c => checkUtility(c)));
     }
 };
