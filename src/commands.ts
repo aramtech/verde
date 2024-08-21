@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import {
     push_utility
 } from "./github";
-import { listUtilitiesInDirectory } from "./project";
+import { listUtilitiesInDirectory, pushAllUtilities } from "./project";
 
 import {
     checkAllUtilities,
@@ -41,8 +41,11 @@ const addRemoveUtilityCommand = (program: Command) =>
     });
 
 const addPushUtilityCommand = (program: Command) =>
-    program.command("push <name>").action(async utility_name => {
-        await push_utility(utility_name);
+    program.command("push [name]").action(async (utility_name?: string) => {
+        if (utility_name) {
+            await push_utility(utility_name);
+        }
+        await pushAllUtilities();
     });
 
 const addHideCommand = (program: Command) =>

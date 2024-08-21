@@ -10,7 +10,7 @@ import {
     removeDir,
     storeObjectInCwd,
 } from "./fs";
-import { checkIfNameIsAvailable } from "./github";
+import { checkIfNameIsAvailable, push_utility } from "./github";
 import logger from "./logger";
 import { CPU_COUNT } from "./os";
 import { type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash } from "./utility";
@@ -193,5 +193,14 @@ export const checkAllUtilities = async () => {
 
     for (const chunk of chunked) {
         await Promise.all(chunk.map(c => checkUtility(c)));
+    }
+};
+
+export const pushAllUtilities = async () => {
+    const utilities = await listUtilitiesInDirectory(await find_project_root());
+    const chunked = chunkArr(utilities, CPU_COUNT * 2);
+
+    for (const chunk of chunked) {
+        await Promise.all(chunk.map(c => push_utility(c.configFile.name)));
     }
 };
