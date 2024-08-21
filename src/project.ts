@@ -25,7 +25,7 @@ type UtilityDescription = {
 const project_root = await find_project_root();
 export const listUtilitiesInDirectory = async (projectPath: string = project_root): Promise<UtilityDescription[]> => {
     const traverseResult = await collectDirsWithFile(projectPath, {
-        exclude: ["node_modules", ".git"],
+        exclude: ["node_modules", ".git", "dist"],
         configFilename: configFilename,
     });
 
