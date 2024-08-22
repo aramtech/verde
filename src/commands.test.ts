@@ -1,4 +1,4 @@
-import { describe, test, beforeAll, afterEach, vi, expect } from "vitest";
+import { describe, test, beforeAll, beforeEach, afterEach, vi, expect } from "vitest";
 import { addCommands } from "./commands";
 import { Command } from "commander";
 import { existsSync } from "node:fs";
@@ -13,6 +13,12 @@ describe("CLI", () => {
 
     beforeAll(async () => {
         fs.exists = existsSync as any;
+    });
+
+    beforeEach(() => {
+        vi.spyOn(process, "exit").mockImplementation(() => {
+            throw new Error("Exit called");
+        });
     });
 
     afterEach(() => process.chdir(originalCwd));
@@ -70,6 +76,11 @@ describe("CLI", () => {
 
         const testDirPath = await moveToTestDir();
 
+        await storeObjectInCwd("package.json", {
+            name: "foo-package",
+            version: "1.0.0",
+        });
+
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
             path.join(testDirPath, "foo-util", "utils.json"),
@@ -99,6 +110,8 @@ describe("CLI", () => {
     test("remove command: no matching utility found should do nothing.", async () => {
         const testDirPath = await moveToTestDir();
 
+        await storeObjectInCwd("package.json", { name: "FOO" });
+
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
             path.join(testDirPath, "foo-util", "utils.json"),
@@ -120,6 +133,8 @@ describe("CLI", () => {
 
     test("remove command: found matching utility, should remove it.", async () => {
         const testDirPath = await moveToTestDir();
+
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
@@ -152,6 +167,8 @@ describe("CLI", () => {
 
         const testDirPath = await moveToTestDir();
 
+        await storeObjectInCwd("package.json", { name: "FOO" });
+
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
             path.join(testDirPath, "foo-util", "utils.json"),
@@ -168,6 +185,8 @@ describe("CLI", () => {
         vi.spyOn(console, "error");
 
         const testDirPath = await moveToTestDir();
+
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
@@ -190,6 +209,8 @@ describe("CLI", () => {
 
         const testDirPath = await moveToTestDir();
 
+        await storeObjectInCwd("package.json", { name: "FOO" });
+
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
             path.join(testDirPath, "foo-util", "utils.json"),
@@ -206,6 +227,8 @@ describe("CLI", () => {
         vi.spyOn(console, "error");
 
         const testDirPath = await moveToTestDir();
+
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
@@ -227,8 +250,13 @@ describe("CLI", () => {
         vi.spyOn(console, "error");
 
         await moveToTestDir();
-        const cmd = addCommands(new Command());
-        await cmd.parseAsync(["node", "verde", "check", "foo"]);
+
+        await storeObjectInCwd("package.json", { name: "FOO" });
+
+        try {
+            const cmd = addCommands(new Command());
+            await cmd.parseAsync(["node", "verde", "check", "foo"]);
+        } catch {}
 
         expect(console.error).toHaveBeenCalledWith("could not find utility with name foo");
     });
@@ -237,6 +265,8 @@ describe("CLI", () => {
         vi.spyOn(console, "error");
 
         const testDirPath = await moveToTestDir();
+
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
         const cmd = addCommands(new Command());
         await fs.mkdir(path.join(testDirPath, "foo"));
@@ -259,6 +289,8 @@ describe("CLI", () => {
 
         const testDirPath = await moveToTestDir();
 
+        await storeObjectInCwd("package.json", { name: "FOO" });
+
         const cmd = addCommands(new Command());
         await fs.mkdir(path.join(testDirPath, "foo"));
         await fs.writeFile(path.join(testDirPath, "foo", "index.ts"), "console.log('hello world')");
@@ -280,6 +312,9 @@ describe("CLI", () => {
         vi.spyOn(console, "error");
 
         await moveToTestDir();
+
+        await storeObjectInCwd("package.json", { name: "FOO" });
+
         const cmd = addCommands(new Command());
         await cmd.parseAsync(["node", "verde", "check"]);
 
@@ -290,6 +325,8 @@ describe("CLI", () => {
         vi.spyOn(console, "log");
 
         const testDirPath = await moveToTestDir();
+
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
         const cmd = addCommands(new Command());
 
@@ -313,7 +350,7 @@ describe("CLI", () => {
 
         while (i > 0) {
             const name = `foo-${i}`;
-            expect(console.log).toHaveBeenCalledWith(`${name} hash match!.`);
+            expect(console.log).toHaveBeenCalledWith(`utility "${name}" hash match!.`);
             i--;
         }
     });
@@ -322,6 +359,8 @@ describe("CLI", () => {
         vi.spyOn(console, "log");
 
         const testDirPath = await moveToTestDir();
+
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
         const cmd = addCommands(new Command());
 

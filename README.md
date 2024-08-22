@@ -8,6 +8,22 @@ a CLI tool for vendoring utilities.
 -   To allow the user to control where the code is hosted and how it's fetched, synced and versioned.
 -   To support hot patches and changes to the code on the fly.
 
+## Installation
+
+To install verde use npm and run the following command
+
+```bash
+$ npm i git@github.com:aramtech/verde.git --global
+```
+
+This will install verde from this github repository, you can then test it via:
+
+```bash
+$ verde list
+
+no tool found!.
+```
+
 ## Vendoring
 
 To turn a directory with TypeScript/JavaScript modules into a vendored utility run:
