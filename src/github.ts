@@ -5,7 +5,7 @@ import ora from "ora";
 import path from "path";
 import url from "url";
 import { download_utility } from "./download_utility.ts";
-import { command_on_system, run_command } from "./exec.js";
+import { isCommandOnSystem, runCommand } from "./os.ts";
 import { find_project_root, readJSON, storeObjectInCwd } from "./fs.ts";
 import { default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
@@ -29,7 +29,7 @@ const download_repo_files = async (
     github_personal_access_token: string,
     new_project_path: string,
 ) => {
-    const tar_exist = command_on_system("tar");
+    const tar_exist = isCommandOnSystem("tar");
     if (!tar_exist) {
         logger.fatal("Please install `tar` command line on your os to continue");
     }
@@ -83,12 +83,12 @@ const download_repo_files = async (
             writer.on("close", () => {
                 if (!error) {
                     loadingSpinner.stop();
-                    run_command(`tar -xf ${tar_full_path} -C ${new_project_full_path}`, {
+                    runCommand(`tar -xf ${tar_full_path} -C ${new_project_full_path}`, {
                         stdio: "inherit",
                         encoding: "utf-8",
                     });
 
-                    run_command(`rm -rf ${tar_full_path}`, {
+                    runCommand(`rm -rf ${tar_full_path}`, {
                         stdio: "inherit",
                         encoding: "utf-8",
                     });
@@ -96,7 +96,7 @@ const download_repo_files = async (
                     const extraction_path = path.join(
                         new_project_full_path,
                         Buffer.from(
-                            run_command(`ls`, {
+                            runCommand(`ls`, {
                                 encoding: "utf-8",
                                 cwd: new_project_full_path,
                             }),
@@ -104,17 +104,17 @@ const download_repo_files = async (
                             .toString("utf-8")
                             .trim(),
                     );
-                    run_command(`mv ${extraction_path}/* ./.`, {
+                    runCommand(`mv ${extraction_path}/* ./.`, {
                         encoding: "utf-8",
                         cwd: new_project_full_path,
                     });
 
-                    run_command(`mv ${path.join(extraction_path, "/.vscode")} .`, {
+                    runCommand(`mv ${path.join(extraction_path, "/.vscode")} .`, {
                         encoding: "utf-8",
                         cwd: new_project_full_path,
                     });
 
-                    run_command(`rm -rf ${extraction_path}`, {
+                    runCommand(`rm -rf ${extraction_path}`, {
                         encoding: "utf-8",
                         cwd: new_project_full_path,
                     });
@@ -347,7 +347,7 @@ export const get_token_for_org = async (org_name: string) => {
 };
 
 export const get_files_with_github_api = async (full_repo_name: string, branch: string, new_project_path: string) => {
-    if (!command_on_system("tar")) {
+    if (!isCommandOnSystem("tar")) {
         Logger.fatal('please install "tar" extraction command line');
     }
     const github_personal_access_token = await get_token_for_repo(full_repo_name);

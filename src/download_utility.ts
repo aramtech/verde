@@ -1,4 +1,4 @@
-import { run_command } from "./exec";
+import { runCommand } from "./os.ts";
 import { find_project_root, is_valid_relative_path } from "./fs";
 import { get_org_name_and_token, get_relative_utils_paths_json, store_relative_utils_path } from "./github";
 import logger from "./logger";
@@ -45,7 +45,7 @@ export async function downloadRepoAsZip(owner: string, repo: string, branch: str
             // Clean up the ZIP file
             await fs.remove(zipPath);
 
-            run_command(`mv ${path.join(project_root, utils_dir, `${repo}-${branch}`)}   ${path.join(localPath)}`);
+            runCommand(`mv ${path.join(project_root, utils_dir, `${repo}-${branch}`)}   ${path.join(localPath)}`);
             resolve();
         });
 
