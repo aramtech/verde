@@ -385,7 +385,7 @@ export const push_utility = async (utility_name: string) => {
             } else {
                 logger.success(`utility ${util.configFile.name} is up to date: ${util.configFile.version}`);
             }
-            process.exit(0);
+            return
         }
     } else {
         return await push();
