@@ -6,7 +6,7 @@ import { find_project_root } from "./fs";
 import { compare_version, deleteBranchOnFailure, get_file_from_repo, get_org_name_and_token, get_utility_versions, type SingleGithubFile } from "./github";
 import logger from "./logger";
 import { checkUtility, listUtilitiesInDirectory } from "./project";
-import { upload_dir_octo } from "./test";
+import { upload_dir_octo } from "./push_directory";
 import { validate_utility_name, validate_utility_version } from "./utility";
 // Helper to read directory contents recursively
 export async function readDirectoryRecursive(dirPath: string) {
