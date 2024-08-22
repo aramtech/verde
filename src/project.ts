@@ -10,7 +10,7 @@ import {
     removeDir,
     storeObjectInCwd,
 } from "./fs";
-import { checkIfNameIsAvailable, push_utility } from "./github";
+import { push_utility } from "./github";
 import logger from "./logger";
 import { CPU_COUNT } from "./os";
 import { type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash } from "./utility";
@@ -23,9 +23,7 @@ type UtilityDescription = {
     files: string[];
 };
 
-const project_root = await find_project_root();
-
-export const listUtilitiesInDirectory = async (projectPath: string = project_root): Promise<UtilityDescription[]> => {
+export const listUtilitiesInDirectory = async (projectPath: string): Promise<UtilityDescription[]> => {
     const traverseResult = await collectDirsWithFile(projectPath, {
         exclude: ["node_modules", ".git", "dist"],
         configFilename: configFilename,
@@ -90,8 +88,8 @@ export const initNewUtility = async (name: string, description: string) => {
     });
 };
 
-export const removeUtilityFromProject = async (name: string, projectPath = project_root) => {
-    const utils = await listUtilitiesInDirectory(projectPath);
+export const removeUtilityFromProject = async (name: string) => {
+    const utils = await listUtilitiesInDirectory(await find_project_root());
 
     for (const util of utils) {
         if (util.configFile.name === name) {

@@ -26,44 +26,44 @@ describe("CLI", () => {
         return name;
     };
 
-    // test("init command: should initialize a package at the cwd.", async () => {
-    //     await moveToTestDir();
+    test("init command: should initialize a package at the cwd.", async () => {
+        await moveToTestDir();
 
-    //     const cmd = new Command();
-    //     addCommands(cmd);
+        const cmd = new Command();
+        addCommands(cmd);
 
-    //     await cmd.parseAsync(["node", "verde", "init", "foo", "-d FOO IS GREAT BAR IS NONE"]);
+        await cmd.parseAsync(["node", "verde", "init", "foo", "-d FOO IS GREAT BAR IS NONE"]);
 
-    //     const utilFile = await readJSON<UtilityFile>("utils.json");
+        const utilFile = await readJSON<UtilityFile>("utils.json");
 
-    //     expect(utilFile.name).toBe("foo");
-    //     expect(utilFile.description).toBe("FOO IS GREAT BAR IS NONE");
-    // });
+        expect(utilFile.name).toBe("foo");
+        expect(utilFile.description).toBe("FOO IS GREAT BAR IS NONE");
+    });
 
-    // test("init command: package already exists in the current dir.", async () => {
-    //     await moveToTestDir();
+    test("init command: package already exists in the current dir.", async () => {
+        await moveToTestDir();
 
-    //     vi.spyOn(console, "error");
+        vi.spyOn(console, "error");
 
-    //     const cmd = new Command();
-    //     addCommands(cmd);
+        const cmd = new Command();
+        addCommands(cmd);
 
-    //     await cmd.parseAsync(["node", "verde", "init", "foo"]);
-    //     await cmd.parseAsync(["node", "verde", "init", "foo"]);
+        await cmd.parseAsync(["node", "verde", "init", "foo"]);
+        await cmd.parseAsync(["node", "verde", "init", "foo"]);
 
-    //     expect(console.error).toHaveBeenCalledWith("directory already managed by verde!.");
-    // });
+        expect(console.error).toHaveBeenCalledWith("directory already managed by verde!.");
+    });
 
-    // test("list command: no packages at the current directory.", async () => {
-    //     vi.spyOn(console, "warn");
+    test("list command: no packages at the current directory.", async () => {
+        vi.spyOn(console, "warn");
 
-    //     await moveToTestDir();
+        await moveToTestDir();
 
-    //     const cmd = addCommands(new Command());
-    //     await cmd.parseAsync(["node", "verde", "list"]);
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "list"]);
 
-    //     expect(console.warn).toHaveBeenCalledWith("no tool found!.");
-    // });
+        expect(console.warn).toHaveBeenCalledWith("no tool found!.");
+    });
 
     test("list command: should list all the tools in the path correctly.", async () => {
         vi.spyOn(console, "log");

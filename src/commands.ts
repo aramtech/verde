@@ -14,7 +14,7 @@ import { validate_utility_version } from "./utility";
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
-        const utils = await listUtilitiesInDirectory();
+        const utils = await listUtilitiesInDirectory(".");
 
         if (utils.length === 0) {
             console.warn("no tool found!.");
