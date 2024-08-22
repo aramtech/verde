@@ -23,10 +23,10 @@ type UtilityDescription = {
     files: string[];
 };
 
-export const listUtilitiesInDirectory = async (projectPath: string): Promise<UtilityDescription[]> => {
-    const traverseResult = await collectDirsWithFile(projectPath, {
+export const listUtilitiesInDirectory = async (dirPath: string): Promise<UtilityDescription[]> => {
+    const traverseResult = await collectDirsWithFile(dirPath, {
         exclude: ["node_modules", ".git", "dist"],
-        configFilename: configFilename,
+        configFilename,
     });
 
     const descArr: UtilityDescription[] = [];
@@ -170,6 +170,7 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
         match: currentHash == previousHash,
     };
 };
+
 export const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
     let result: T[][] = [];
     let currentChunk: T[] = [];
