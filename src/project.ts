@@ -133,10 +133,11 @@ export const revealUtilityInProject = async (name: string) => {
 
 export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
     logger.log(`looking for utility "${nameOrDesc}"`);
+
     const util = typeof nameOrDesc === "string" ? await getUtilityByName(nameOrDesc) : nameOrDesc;
 
     if (!util) {
-        logger.fatal(`could not find utility with name ${nameOrDesc}`);
+        logger.error(`could not find utility with name ${nameOrDesc}`);
         process.exit(1);
     }
 
@@ -144,7 +145,7 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
 
     const previousHash = util.configFile.hash || "";
 
-    const utilFilePaths = util.files.filter(f => basename(f) !== configFilename);
+    const utilFilePaths = util.files.filter(f => basename(f) !== configFilename).sort();
     const files = await readFiles(utilFilePaths);
     const currentHash = hashBuffersWithSha256(files);
 
@@ -160,7 +161,8 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
             match: currentHash == previousHash,
         };
     }
-    console.log(`utility "${util.configFile.name}" hash match!. no changes detected`);
+
+    console.log(`utility "${util.configFile.name}" hash match!.`);
 
     return {
         currentHash,

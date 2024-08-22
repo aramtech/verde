@@ -1,4 +1,4 @@
-import { describe, test, beforeAll, afterEach, vi, expect } from "vitest";
+import { describe, test, beforeAll, beforeEach, afterEach, vi, expect } from "vitest";
 import { addCommands } from "./commands";
 import { Command } from "commander";
 import { existsSync } from "node:fs";
@@ -13,6 +13,12 @@ describe("CLI", () => {
 
     beforeAll(async () => {
         fs.exists = existsSync as any;
+    });
+
+    beforeEach(() => {
+        vi.spyOn(process, "exit").mockImplementation(() => {
+            throw new Error("Exit called");
+        });
     });
 
     afterEach(() => process.chdir(originalCwd));
@@ -101,271 +107,299 @@ describe("CLI", () => {
         expect(console.log).toHaveBeenCalledWith("Tool found: ", "baz");
     });
 
-    // test("remove command: no matching utility found should do nothing.", async () => {
-    //     const testDirPath = await moveToTestDir();
+    test("remove command: no matching utility found should do nothing.", async () => {
+        const testDirPath = await moveToTestDir();
 
-    //     await fs.mkdir(path.join(testDirPath, "foo-util"));
-    //     await fs.writeFile(
-    //         path.join(testDirPath, "foo-util", "utils.json"),
-    //         JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
-    //     );
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    //     await fs.mkdir(path.join(testDirPath, "bar-util"));
-    //     await fs.writeFile(
-    //         path.join(testDirPath, "bar-util", "utils.json"),
-    //         JSON.stringify({ name: "bar", deps: {}, version: "10.0.0", hash: "bar" }),
-    //     );
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
 
-    //     const cmd = addCommands(new Command());
-    //     await cmd.parseAsync(["node", "verde", "remove", "baz"]);
+        await fs.mkdir(path.join(testDirPath, "bar-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "bar-util", "utils.json"),
+            JSON.stringify({ name: "bar", deps: {}, version: "10.0.0", hash: "bar" }),
+        );
 
-    //     expect(await fs.exists(path.join(testDirPath, "foo-util"))).toBe(true);
-    //     expect(await fs.exists(path.join(testDirPath, "bar-util"))).toBe(true);
-    // });
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "remove", "baz"]);
 
-    // test("remove command: found matching utility, should remove it.", async () => {
-    //     const testDirPath = await moveToTestDir();
+        expect(await fs.exists(path.join(testDirPath, "foo-util"))).toBe(true);
+        expect(await fs.exists(path.join(testDirPath, "bar-util"))).toBe(true);
+    });
 
-    //     await fs.mkdir(path.join(testDirPath, "foo-util"));
-    //     await fs.writeFile(
-    //         path.join(testDirPath, "foo-util", "utils.json"),
-    //         JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
-    //     );
+    test("remove command: found matching utility, should remove it.", async () => {
+        const testDirPath = await moveToTestDir();
 
-    //     await fs.mkdir(path.join(testDirPath, "bar-util"));
-    //     await fs.writeFile(
-    //         path.join(testDirPath, "bar-util", "utils.json"),
-    //         JSON.stringify({ name: "bar", deps: {}, version: "10.0.0", hash: "bar" }),
-    //     );
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    //     await fs.mkdir(path.join(testDirPath, "baz-util"));
-    //     await fs.writeFile(
-    //         path.join(testDirPath, "baz-util", "utils.json"),
-    //         JSON.stringify({ name: "baz", deps: {}, version: "10.0.0", hash: "bar" }),
-    //     );
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
 
-    //     const cmd = addCommands(new Command());
-    //     await cmd.parseAsync(["node", "verde", "remove", "baz"]);
+        await fs.mkdir(path.join(testDirPath, "bar-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "bar-util", "utils.json"),
+            JSON.stringify({ name: "bar", deps: {}, version: "10.0.0", hash: "bar" }),
+        );
 
-    //     expect(await fs.exists(path.join(testDirPath, "foo-util"))).toBe(true);
-    //     expect(await fs.exists(path.join(testDirPath, "bar-util"))).toBe(true);
-    //     expect(await fs.exists(path.join(testDirPath, "baz-util"))).toBe(false);
-    // });
+        await fs.mkdir(path.join(testDirPath, "baz-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "baz-util", "utils.json"),
+            JSON.stringify({ name: "baz", deps: {}, version: "10.0.0", hash: "bar" }),
+        );
 
-    // test("hide command: no matching utility found.", async () => {
-    //     vi.spyOn(console, "error");
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "remove", "baz"]);
 
-    //     const testDirPath = await moveToTestDir();
+        expect(await fs.exists(path.join(testDirPath, "foo-util"))).toBe(true);
+        expect(await fs.exists(path.join(testDirPath, "bar-util"))).toBe(true);
+        expect(await fs.exists(path.join(testDirPath, "baz-util"))).toBe(false);
+    });
 
-    //     await fs.mkdir(path.join(testDirPath, "foo-util"));
-    //     await fs.writeFile(
-    //         path.join(testDirPath, "foo-util", "utils.json"),
-    //         JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
-    //     );
+    test("hide command: no matching utility found.", async () => {
+        vi.spyOn(console, "error");
 
-    //     const cmd = addCommands(new Command());
-    //     await cmd.parseAsync(["node", "verde", "hide", "baz"]);
+        const testDirPath = await moveToTestDir();
 
-    //     expect(console.error).toHaveBeenCalledWith("could not find utility with name baz");
-    // });
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    // test("hide command: should update the config file of the utility.", async () => {
-    //     vi.spyOn(console, "error");
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
 
-    //     const testDirPath = await moveToTestDir();
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "hide", "baz"]);
 
-    //     await fs.mkdir(path.join(testDirPath, "foo-util"));
-    //     await fs.writeFile(
-    //         path.join(testDirPath, "foo-util", "utils.json"),
-    //         JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
-    //     );
+        expect(console.error).toHaveBeenCalledWith("could not find utility with name baz");
+    });
 
-    //     const cmd = addCommands(new Command());
-    //     await cmd.parseAsync(["node", "verde", "hide", "foo"]);
+    test("hide command: should update the config file of the utility.", async () => {
+        vi.spyOn(console, "error");
 
-    //     expect(console.error).not.toHaveBeenCalledWith("could not find utility with name foo");
+        const testDirPath = await moveToTestDir();
 
-    //     const utilFile = await readJSON<UtilityFile>("./foo-util/utils.json");
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    //     expect(utilFile.private).toBe(true);
-    // });
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
 
-    // test("reveal command: no matching utility found.", async () => {
-    //     vi.spyOn(console, "error");
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "hide", "foo"]);
 
-    //     const testDirPath = await moveToTestDir();
+        expect(console.error).not.toHaveBeenCalledWith("could not find utility with name foo");
 
-    //     await fs.mkdir(path.join(testDirPath, "foo-util"));
-    //     await fs.writeFile(
-    //         path.join(testDirPath, "foo-util", "utils.json"),
-    //         JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
-    //     );
+        const utilFile = await readJSON<UtilityFile>("./foo-util/utils.json");
 
-    //     const cmd = addCommands(new Command());
-    //     await cmd.parseAsync(["node", "verde", "reveal", "baz"]);
+        expect(utilFile.private).toBe(true);
+    });
 
-    //     expect(console.error).toHaveBeenCalledWith("could not find utility with name baz");
-    // });
+    test("reveal command: no matching utility found.", async () => {
+        vi.spyOn(console, "error");
 
-    // test("reveal command: should update the config file of the utility.", async () => {
-    //     vi.spyOn(console, "error");
+        const testDirPath = await moveToTestDir();
 
-    //     const testDirPath = await moveToTestDir();
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    //     await fs.mkdir(path.join(testDirPath, "foo-util"));
-    //     await fs.writeFile(
-    //         path.join(testDirPath, "foo-util", "utils.json"),
-    //         JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
-    //     );
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
 
-    //     const cmd = addCommands(new Command());
-    //     await cmd.parseAsync(["node", "verde", "reveal", "foo"]);
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "reveal", "baz"]);
 
-    //     expect(console.error).not.toHaveBeenCalledWith("could not find utility with name foo");
+        expect(console.error).toHaveBeenCalledWith("could not find utility with name baz");
+    });
 
-    //     const utilFile = await readJSON<UtilityFile>("./foo-util/utils.json");
+    test("reveal command: should update the config file of the utility.", async () => {
+        vi.spyOn(console, "error");
 
-    //     expect(utilFile.private).toBe(false);
-    // });
+        const testDirPath = await moveToTestDir();
 
-    // test("check command: should log an error if the utility cannot be found.", async () => {
-    //     vi.spyOn(console, "error");
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    //     await moveToTestDir();
-    //     const cmd = addCommands(new Command());
-    //     await cmd.parseAsync(["node", "verde", "check", "foo"]);
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
 
-    //     expect(console.error).toHaveBeenCalledWith("could not find utility with name foo");
-    // });
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "reveal", "foo"]);
 
-    // test("check command: checksum matches.", async () => {
-    //     vi.spyOn(console, "error");
+        expect(console.error).not.toHaveBeenCalledWith("could not find utility with name foo");
 
-    //     const testDirPath = await moveToTestDir();
+        const utilFile = await readJSON<UtilityFile>("./foo-util/utils.json");
 
-    //     const cmd = addCommands(new Command());
-    //     await fs.mkdir(path.join(testDirPath, "foo"));
-    //     await fs.writeFile(path.join(testDirPath, "foo", "index.ts"), "console.log('hello world')");
-    //     process.chdir("./foo");
-    //     await cmd.parseAsync(["node", "verde", "init", "foo"]);
-    //     process.chdir("..");
+        expect(utilFile.private).toBe(false);
+    });
 
-    //     const utilFileBeforeCheck = await readJSON<UtilityFile>("./foo/utils.json");
+    test("check command: should log an error if the utility cannot be found.", async () => {
+        vi.spyOn(console, "error");
 
-    //     await cmd.parseAsync(["node", "verde", "check", "foo"]);
+        await moveToTestDir();
 
-    //     const utilFileAfterCheck = await readJSON<UtilityFile>("./foo/utils.json");
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    //     expect(utilFileBeforeCheck.hash).toBe(utilFileAfterCheck.hash);
-    // });
+        try {
+            const cmd = addCommands(new Command());
+            await cmd.parseAsync(["node", "verde", "check", "foo"]);
+        } catch {}
 
-    // test("check command: checksum mismatch.", async () => {
-    //     vi.spyOn(console, "error");
+        expect(console.error).toHaveBeenCalledWith("could not find utility with name foo");
+    });
 
-    //     const testDirPath = await moveToTestDir();
+    test("check command: checksum matches.", async () => {
+        vi.spyOn(console, "error");
 
-    //     const cmd = addCommands(new Command());
-    //     await fs.mkdir(path.join(testDirPath, "foo"));
-    //     await fs.writeFile(path.join(testDirPath, "foo", "index.ts"), "console.log('hello world')");
-    //     process.chdir("./foo");
-    //     await cmd.parseAsync(["node", "verde", "init", "foo"]);
-    //     await fs.writeFile(path.join(testDirPath, "foo", "index2.ts"), "console.log('this file changes the hash')");
-    //     process.chdir("..");
+        const testDirPath = await moveToTestDir();
 
-    //     const utilFileBeforeCheck = await readJSON<UtilityFile>("./foo/utils.json");
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    //     await cmd.parseAsync(["node", "verde", "check", "foo"]);
+        const cmd = addCommands(new Command());
+        await fs.mkdir(path.join(testDirPath, "foo"));
+        await fs.writeFile(path.join(testDirPath, "foo", "index.ts"), "console.log('hello world')");
+        process.chdir("./foo");
+        await cmd.parseAsync(["node", "verde", "init", "foo"]);
+        process.chdir("..");
 
-    //     const utilFileAfterCheck = await readJSON<UtilityFile>("./foo/utils.json");
+        const utilFileBeforeCheck = await readJSON<UtilityFile>("./foo/utils.json");
 
-    //     expect(utilFileBeforeCheck.hash).not.toBe(utilFileAfterCheck.hash);
-    // });
+        await cmd.parseAsync(["node", "verde", "check", "foo"]);
 
-    // test("check all command: no utilities found in project.", async () => {
-    //     vi.spyOn(console, "error");
+        const utilFileAfterCheck = await readJSON<UtilityFile>("./foo/utils.json");
 
-    //     await moveToTestDir();
-    //     const cmd = addCommands(new Command());
-    //     await cmd.parseAsync(["node", "verde", "check"]);
+        expect(utilFileBeforeCheck.hash).toBe(utilFileAfterCheck.hash);
+    });
 
-    //     expect(console.error).not.toHaveBeenCalled();
-    // });
+    test("check command: checksum mismatch.", async () => {
+        vi.spyOn(console, "error");
 
-    // test("check all command: all checksums match.", async () => {
-    //     vi.spyOn(console, "log");
+        const testDirPath = await moveToTestDir();
 
-    //     const testDirPath = await moveToTestDir();
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    //     const cmd = addCommands(new Command());
+        const cmd = addCommands(new Command());
+        await fs.mkdir(path.join(testDirPath, "foo"));
+        await fs.writeFile(path.join(testDirPath, "foo", "index.ts"), "console.log('hello world')");
+        process.chdir("./foo");
+        await cmd.parseAsync(["node", "verde", "init", "foo"]);
+        await fs.writeFile(path.join(testDirPath, "foo", "index2.ts"), "console.log('this file changes the hash')");
+        process.chdir("..");
 
-    //     let i = 50;
+        const utilFileBeforeCheck = await readJSON<UtilityFile>("./foo/utils.json");
 
-    //     while (i > 0) {
-    //         const name = `foo-${i}`;
+        await cmd.parseAsync(["node", "verde", "check", "foo"]);
 
-    //         await fs.mkdir(path.join(testDirPath, name));
-    //         await fs.writeFile(path.join(testDirPath, name, "index.ts"), "console.log('hello world')");
-    //         process.chdir(`./${name}`);
-    //         await cmd.parseAsync(["node", "verde", "init", name]);
+        const utilFileAfterCheck = await readJSON<UtilityFile>("./foo/utils.json");
 
-    //         i--;
-    //         process.chdir("..");
-    //     }
+        expect(utilFileBeforeCheck.hash).not.toBe(utilFileAfterCheck.hash);
+    });
 
-    //     await cmd.parseAsync(["node", "verde", "check"]);
+    test("check all command: no utilities found in project.", async () => {
+        vi.spyOn(console, "error");
 
-    //     i = 50;
+        await moveToTestDir();
 
-    //     while (i > 0) {
-    //         const name = `foo-${i}`;
-    //         expect(console.log).toHaveBeenCalledWith(`${name} hash match!.`);
-    //         i--;
-    //     }
-    // });
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    // test("check all command: half checksums do not match.", async () => {
-    //     vi.spyOn(console, "log");
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "check"]);
 
-    //     const testDirPath = await moveToTestDir();
+        expect(console.error).not.toHaveBeenCalled();
+    });
 
-    //     const cmd = addCommands(new Command());
+    test("check all command: all checksums match.", async () => {
+        vi.spyOn(console, "log");
 
-    //     let i = 50;
+        const testDirPath = await moveToTestDir();
 
-    //     while (i > 0) {
-    //         const name = `foo-${i}`;
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
-    //         await fs.mkdir(path.join(testDirPath, name));
-    //         await fs.writeFile(path.join(testDirPath, name, "index.ts"), "console.log('hello world')");
-    //         process.chdir(`./${name}`);
-    //         await cmd.parseAsync(["node", "verde", "init", name]);
+        const cmd = addCommands(new Command());
 
-    //         i--;
-    //         process.chdir("..");
-    //     }
+        let i = 50;
 
-    //     i = 25;
+        while (i > 0) {
+            const name = `foo-${i}`;
 
-    //     while (i > 0) {
-    //         const name = `foo-${i}`;
-    //         process.chdir(`./${name}`);
+            await fs.mkdir(path.join(testDirPath, name));
+            await fs.writeFile(path.join(testDirPath, name, "index.ts"), "console.log('hello world')");
+            process.chdir(`./${name}`);
+            await cmd.parseAsync(["node", "verde", "init", name]);
 
-    //         await fs.writeFile(path.join(testDirPath, name, "index2.ts"), "console.log('should change stuff')");
+            i--;
+            process.chdir("..");
+        }
 
-    //         i--;
-    //         process.chdir("..");
-    //     }
+        await cmd.parseAsync(["node", "verde", "check"]);
 
-    //     await cmd.parseAsync(["node", "verde", "check"]);
+        i = 50;
 
-    //     i = 25;
+        while (i > 0) {
+            const name = `foo-${i}`;
+            expect(console.log).toHaveBeenCalledWith(`utility "${name}" hash match!.`);
+            i--;
+        }
+    });
 
-    //     while (i > 0) {
-    //         const name = `foo-${i}`;
-    //         expect(console.log).toHaveBeenCalledWith(`${name} hash mismatch, updating on disk config file...`);
+    test("check all command: half checksums do not match.", async () => {
+        vi.spyOn(console, "log");
 
-    //         i--;
-    //         process.chdir("..");
-    //     }
-    // });
+        const testDirPath = await moveToTestDir();
+
+        await storeObjectInCwd("package.json", { name: "FOO" });
+
+        const cmd = addCommands(new Command());
+
+        let i = 50;
+
+        while (i > 0) {
+            const name = `foo-${i}`;
+
+            await fs.mkdir(path.join(testDirPath, name));
+            await fs.writeFile(path.join(testDirPath, name, "index.ts"), "console.log('hello world')");
+            process.chdir(`./${name}`);
+            await cmd.parseAsync(["node", "verde", "init", name]);
+
+            i--;
+            process.chdir("..");
+        }
+
+        i = 25;
+
+        while (i > 0) {
+            const name = `foo-${i}`;
+            process.chdir(`./${name}`);
+
+            await fs.writeFile(path.join(testDirPath, name, "index2.ts"), "console.log('should change stuff')");
+
+            i--;
+            process.chdir("..");
+        }
+
+        await cmd.parseAsync(["node", "verde", "check"]);
+
+        i = 25;
+
+        while (i > 0) {
+            const name = `foo-${i}`;
+            expect(console.log).toHaveBeenCalledWith(`${name} hash mismatch, updating on disk config file...`);
+
+            i--;
+            process.chdir("..");
+        }
+    });
 });

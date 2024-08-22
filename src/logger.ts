@@ -16,6 +16,10 @@ const color_text = (
     color: "black" | "red" | "green" | "yellow" | "blue" | "magenta" | "cyan" | "white" | "console_color",
     ...text: any[]
 ): string => {
+    if (process.env.NODE_ENV === "test") {
+        return text.join(" ");
+    }
+
     return `${colors[color]}${text.join(" ")}${colors.console_color}`;
 };
 
