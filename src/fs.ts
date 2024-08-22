@@ -18,7 +18,7 @@ export const collectFilePathsIn = async (dir: string) => {
     let results: string[] = [];
 
     for (const c of contents) {
-        const stats = await fs.statSync(path.join(dir, c));
+        const stats = fs.statSync(path.join(dir, c));
 
         if (stats.isDirectory()) {
             const gotten = await collectFilePathsIn(path.join(dir, c));
@@ -40,13 +40,13 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
         return [];
     }
 
-    const pathStats = await fs.statSync(initialPath);
+    const pathStats = fs.statSync(initialPath);
 
     if (!pathStats.isDirectory()) {
         return [];
     }
 
-    const contents = await fs.readdirSync(initialPath);
+    const contents = fs.readdirSync(initialPath);
 
     if (contents.find(x => x === configFilename)) {
         const fullContents = await collectFilePathsIn(initialPath);

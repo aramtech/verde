@@ -10,9 +10,10 @@ import {
     removeDir,
     storeObjectInCwd,
 } from "./fs";
-import { checkIfNameIsAvailable, push_utility } from "./github";
+import { checkIfNameIsAvailable } from "./github";
 import logger from "./logger";
 import { CPU_COUNT } from "./os";
+import { push_utility } from "./upload_git_tree";
 import { type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash } from "./utility";
 
 const configFilename = "utils.json";

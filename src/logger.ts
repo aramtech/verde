@@ -1,4 +1,4 @@
-import process from "process";
+import ora from "ora";
 
 const colors = {
     black: "\x1b[30m",
@@ -12,6 +12,7 @@ const colors = {
     console_color: "\x1b[0m",
 };
 
+export const loadingSpinner = ora();
 const color_text = (
     color: "black" | "red" | "green" | "yellow" | "blue" | "magenta" | "cyan" | "white" | "console_color",
     ...text: any[]
@@ -19,23 +20,43 @@ const color_text = (
     return `${colors[color]}${text.join(" ")}${colors.console_color}`;
 };
 
+const spin_wrapper = (cp: (...args: any[]) => any) => {
+    if (loadingSpinner.isSpinning) {
+        loadingSpinner.clear();
+        cp();
+        loadingSpinner.clear();
+        return;
+    }
+    cp();
+};
+
 export const error = (...message: any[]) => {
-    console.error(color_text("red", ...message));
+    spin_wrapper(() => {
+        console.error(color_text("red", ...message));
+    });
 };
 
 export const success = (...message: any[]) => {
-    console.log(color_text("green", ...message));
+    spin_wrapper(() => {
+        console.log(color_text("green", ...message));
+    });
 };
 
 export const warning = (...message: any[]) => {
-    console.warn(color_text("yellow", ...message));
+    spin_wrapper(() => {
+        console.warn(color_text("yellow", ...message));
+    });
 };
 
 export const fatal = (...message: any[]) => {
-    console.log(...message);
-    process.exit(1);
+    spin_wrapper(() => {
+        console.error(...message);
+        process.exit(1);
+    });
 };
 export const log = (...message: any[]) => {
-    console.log(...message);
+    spin_wrapper(() => {
+        console.log(...message);
+    });
 };
 export default { error, success, warning, fatal, log };
