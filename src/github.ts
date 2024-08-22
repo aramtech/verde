@@ -11,7 +11,7 @@ import { default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
 import { checkUtility, chunkArr, getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
 import { read_answer_to, read_choice } from "./prompt.js";
-import { validate_utility_name, validate_utility_version, type ParsedVersion } from "./utility.ts";
+import { type ParsedVersion, isUtilityNameValid, parseUtilityVersion } from "./utility.ts";
 
 export const checkIfNameIsAvailable = async (name: string) => {
     const utils = await listUtilitiesInDirectory(await find_project_root());
@@ -453,14 +453,7 @@ export async function get_utility_versions(owner: string, utility: string): Prom
     }
 
     const versions_branches = branches
-        .map(b => {
-            try {
-                const v = validate_utility_version(b.name, false);
-                return v;
-            } catch (error) {
-                return null;
-            }
-        })
+        .map(b => parseUtilityVersion(b.name))
         .filter(v => !!v)
         .sort((a, b) => {
             const left = a as ParsedVersion;
@@ -696,8 +689,8 @@ type SingleGithubFile = {
 };
 
 export const compare_version = (version_a: string, operation: "==" | "<" | ">" | "<=" | ">=", version_b: string) => {
-    const a = validate_utility_version(version_a);
-    const b = validate_utility_version(version_b);
+    const a = parseUtilityVersion(version_a) as ParsedVersion;
+    const b = parseUtilityVersion(version_b) as ParsedVersion;
 
     if (operation == "<") {
         if (a.major != b.major) {
@@ -744,6 +737,20 @@ export const compare_version = (version_a: string, operation: "==" | "<" | ">" |
     }
 };
 
+const assertUtilityNameIsValid = (n: string) => {
+    if (isUtilityNameValid(n) === false) {
+        logger.fatal(`${n} is not a valid utility name.`);
+        process.exit(1);
+    }
+};
+
+const assertUtilityVersionIsValid = (v: string) => {
+    if (parseUtilityVersion(v) === null) {
+        logger.fatal(`${v} is not a valid utility version.`);
+        process.exit(1);
+    }
+};
+
 export const push_utility = async (utility_name: string) => {
     /**
      * - make sure utility actually exists --
@@ -785,8 +792,8 @@ export const push_utility = async (utility_name: string) => {
         return;
     }
 
-    validate_utility_version(util.configFile.version || "");
-    validate_utility_name(util.configFile.name);
+    assertUtilityVersionIsValid(util.configFile.version || "");
+    assertUtilityNameIsValid(util.configFile.name);
 
     const record = await get_org_name_and_token();
     const result = await check_if_repository_exists_in_org(record.org_name, util.configFile.name);

@@ -10,7 +10,8 @@ import {
     removeUtilityFromProject,
     revealUtilityInProject,
 } from "./project";
-import { validate_utility_version } from "./utility";
+import { parseUtilityVersion } from "./utility";
+import Logger from "./logger";
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
@@ -79,11 +80,11 @@ const addPullCommand = (program: Command) =>
                 },
             ) => {
                 const { version } = options;
-                if (version) {
-                    validate_utility_version(version);
-                }
 
-                if (name) {
+                if (version && !parseUtilityVersion(version)) {
+                    Logger.fatal(`${version} is not a valid utility version.`);
+                    process.exit(1);
+                } else if (name) {
                     await pull_utility(name, version);
                     return;
                 }
