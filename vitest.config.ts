@@ -4,5 +4,6 @@ export default defineConfig({
     test: {
         mockReset: true,
         restoreMocks: true,
+        setupFiles: ["./globalTestSetup.ts"],
     },
 });

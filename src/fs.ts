@@ -88,7 +88,7 @@ export const removeDir = async (p: string) => fs.rmdirSync(p, { recursive: true 
 
 let project_root: null | string = null;
 export async function find_project_root(currentDir = path.resolve(".")) {
-    if (project_root) {
+    if (project_root && process.env.NODE_ENV !== "test") {
         return project_root;
     }
 

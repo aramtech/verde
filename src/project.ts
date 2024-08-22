@@ -24,6 +24,7 @@ type UtilityDescription = {
 };
 const project_root = await find_project_root();
 let utilities_cache: UtilityDescription[] | null = null;
+
 export const listUtilitiesInDirectory = async (projectPath: string = project_root): Promise<UtilityDescription[]> => {
     if (projectPath == project_root && utilities_cache) {
         return utilities_cache;
@@ -69,7 +70,7 @@ export const initNewUtility = async (name: string, description: string) => {
         return;
     }
 
-    const nameNotAvailable = (await checkIfNameIsAvailable(name)) === false;
+    const nameNotAvailable = !!utils.find(u => u.configFile.name === name);
 
     if (nameNotAvailable) {
         console.error("name taken by a different utility.");
