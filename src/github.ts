@@ -11,7 +11,7 @@ import { default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
 import { checkUtility, chunkArr, getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
 import { read_answer_to, read_choice } from "./prompt.js";
-import { validate_utility_name, validate_utility_version } from "./utility.ts";
+import { validate_utility_name, validate_utility_version, type ParsedVersion } from "./utility.ts";
 
 export const checkIfNameIsAvailable = async (name: string) => {
     const utils = await listUtilitiesInDirectory(await find_project_root());
@@ -445,31 +445,37 @@ async function list_branches(owner: string, repo: string) {
     }
 }
 
-export async function get_utility_versions(owner: string, utility: string) {
+export async function get_utility_versions(owner: string, utility: string): Promise<ParsedVersion[]> {
     const branches = await list_branches(owner, utility);
-    if (branches) {
-        const versions_branches = branches
-            .map(b => {
-                try {
-                    const v = validate_utility_version(b.name, false);
-                    return v;
-                } catch (error) {
-                    return null;
-                }
-            })
-            .filter(v => !!v)
-            .sort((a, b) => {
-                if (compare_version(a.version, ">", b.version)) {
-                    return 1;
-                } else if (compare_version(a.version, "<", b.version)) {
-                    return -1;
-                } else {
-                    return 0;
-                }
-            });
-        return versions_branches;
+
+    if (!branches) {
+        return [];
     }
-    return [];
+
+    const versions_branches = branches
+        .map(b => {
+            try {
+                const v = validate_utility_version(b.name, false);
+                return v;
+            } catch (error) {
+                return null;
+            }
+        })
+        .filter(v => !!v)
+        .sort((a, b) => {
+            const left = a as ParsedVersion;
+            const right = b as ParsedVersion;
+
+            if (compare_version(left.version, ">", right.version)) {
+                return 1;
+            } else if (compare_version(left.version, "<", right.version)) {
+                return -1;
+            }
+
+            return 0;
+        });
+
+    return versions_branches as ParsedVersion[];
 }
 
 export async function create_branch_if_not_exists(owner: string, repo: string, branch: string, baseBranch = "0.1.0") {

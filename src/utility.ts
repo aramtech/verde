@@ -13,7 +13,15 @@ export const parseUtilityFileFromBuffer = (buff: Buffer) => {
     return parsed as UtilityFile;
 };
 
-export const validate_utility_version = (version: string, kill = true) => {
+export type ParsedVersion = {
+    version: string;
+    major: number;
+    minor: number;
+    batch: number;
+    combined: number;
+};
+
+export const validate_utility_version = (version: string, kill = true): ParsedVersion => {
     /**
      * make sure its a string comprized of three number joined by "."
      */
