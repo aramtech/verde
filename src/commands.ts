@@ -125,7 +125,7 @@ const addPullCommand = (program: Command) =>
             },
         );
 
-const add_list_utility_versions = (program: Command) => {
+const addListUtilityVersions = (program: Command) => {
     program.command("list-versions <utility_name>").action(async (utility_name: string) => {
         const util = await getUtilityByName(utility_name);
 
@@ -160,7 +160,7 @@ export const addCommands = (program: Command) => {
     addHideCommand(program);
     addRevealCommand(program);
     addCheckCommand(program);
-    add_list_utility_versions(program);
+    addListUtilityVersions(program);
     addDeleteBranchVersion(program);
     return program;
 };
