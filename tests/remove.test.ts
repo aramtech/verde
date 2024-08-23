@@ -5,10 +5,9 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
-import { readJSON, storeObjectInCwd } from "../src/fs";
-import { type UtilityFile } from "../src/utility";
+import { storeObjectInCwd } from "../src/fs";
 
-describe("CLI", () => {
+describe("remove", () => {
     let originalCwd: string = process.cwd();
 
     beforeAll(async () => {
