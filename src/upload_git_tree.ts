@@ -14,7 +14,8 @@ import {
 import logger from "./logger";
 import { checkUtility, listUtilitiesInDirectory } from "./project";
 import { upload_dir_octo } from "./push_directory";
-import { validate_utility_name, validate_utility_version } from "./utility";
+import { isUtilityNameValid, parseUtilityVersion } from "./utility";
+
 // Helper to read directory contents recursively
 export async function readDirectoryRecursive(dirPath: string) {
     const files = [] as string[];
@@ -331,9 +332,16 @@ export const push_utility = async (utility_name: string) => {
     }
 
     console.log("validating version");
-    validate_utility_version(util.configFile.version || "", true);
+    if (!parseUtilityVersion(util.configFile.version)) {
+        logger.fatal(`${util.configFile.version} is not a valid version`);
+        return;
+    }
+
     console.log("validating name");
-    validate_utility_name(util.configFile.name);
+    if (!isUtilityNameValid(util.configFile.name)) {
+        logger.fatal(`"${util.configFile.name}" is not a valid name.`);
+        return;
+    }
 
     console.log("getting org and token");
     const record = await get_org_name_and_token();
