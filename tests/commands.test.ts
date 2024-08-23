@@ -1,12 +1,12 @@
 import { describe, test, beforeAll, beforeEach, afterEach, vi, expect } from "vitest";
-import { addCommands } from "./commands";
+import { addCommands } from "../src/commands";
 import { Command } from "commander";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
-import { readJSON, storeObjectInCwd } from "./fs";
-import { type UtilityFile } from "./utility";
+import { readJSON, storeObjectInCwd } from "../src/fs";
+import { type UtilityFile } from "../src/utility";
 
 describe("CLI", () => {
     let originalCwd: string = process.cwd();
