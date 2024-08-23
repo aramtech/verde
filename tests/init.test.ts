@@ -8,7 +8,7 @@ import path from "path";
 import { readJSON, storeObjectInCwd } from "../src/fs";
 import { type UtilityFile } from "../src/utility";
 
-describe("CLI", () => {
+describe("init", () => {
     let originalCwd: string = process.cwd();
 
     beforeAll(async () => {

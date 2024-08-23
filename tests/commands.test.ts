@@ -32,53 +32,6 @@ describe("CLI", () => {
         return name;
     };
 
-    test("list command: no packages at the current directory.", async () => {
-        vi.spyOn(console, "warn");
-
-        await moveToTestDir();
-
-        const cmd = addCommands(new Command());
-        await cmd.parseAsync(["node", "verde", "list"]);
-
-        expect(console.warn).toHaveBeenCalledWith("no tool found!.");
-    });
-
-    test("list command: should list all the tools in the path correctly.", async () => {
-        vi.spyOn(console, "log");
-
-        const testDirPath = await moveToTestDir();
-
-        await storeObjectInCwd("package.json", {
-            name: "foo-package",
-            version: "1.0.0",
-        });
-
-        await fs.mkdir(path.join(testDirPath, "foo-util"));
-        await fs.writeFile(
-            path.join(testDirPath, "foo-util", "utils.json"),
-            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
-        );
-
-        await fs.mkdir(path.join(testDirPath, "bar-util"));
-        await fs.writeFile(
-            path.join(testDirPath, "bar-util", "utils.json"),
-            JSON.stringify({ name: "bar", deps: {}, version: "10.0.0", hash: "bar" }),
-        );
-
-        await fs.mkdir(path.join(testDirPath, "baz-util"));
-        await fs.writeFile(
-            path.join(testDirPath, "baz-util", "utils.json"),
-            JSON.stringify({ name: "baz", deps: {}, version: "10.0.0", hash: "baz" }),
-        );
-
-        const cmd = addCommands(new Command());
-        await cmd.parseAsync(["node", "verde", "list"]);
-
-        expect(console.log).toHaveBeenCalledWith("Tool found: ", "foo");
-        expect(console.log).toHaveBeenCalledWith("Tool found: ", "bar");
-        expect(console.log).toHaveBeenCalledWith("Tool found: ", "baz");
-    });
-
     test("remove command: no matching utility found should do nothing.", async () => {
         const testDirPath = await moveToTestDir();
 
