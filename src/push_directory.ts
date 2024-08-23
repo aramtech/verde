@@ -20,18 +20,23 @@ export const upload_dir_octo = async (
     console.log("listing repos for org", ORGANIZATION);
     const repos = await octo.repos.listForOrg({
         org: ORGANIZATION,
-        type: "all", 
-        per_page: 10e4
+        type: "all",
+        per_page: 10e4,
     });
-    console.log("looking for repo", repo_name, "in", repos.data.map((repo: any) => repo.name).filter(r=>r.startsWith("rest")))
+    console.log(
+        "looking for repo",
+        repo_name,
+        "in",
+        repos.data.map((repo: any) => repo.name).filter(r => r.startsWith("rest")),
+    );
     if (!repos.data.map((repo: any) => repo.name).includes(REPO)) {
-        console.log("creating repo since its not found")
+        console.log("creating repo since its not found");
         await createRepo(octo, ORGANIZATION, REPO);
     }
     /**
      * my-local-folder has files on its root, and subdirectories with files
      */
-    console.log("uploading to repo")
+    console.log("uploading to repo");
     await uploadToRepo(octo, directory_full_path, ORGANIZATION, REPO, branch);
 };
 
@@ -43,19 +48,19 @@ const uploadToRepo = async (octo: Octokit, coursePath: string, org: string, repo
     // gets commit's AND its tree's SHA
     console.log("getting current commit");
     const currentCommit = await getCurrentCommit(octo, org, repo);
-    console.log("collect file paths")
+    console.log("collect file paths");
     const filesPaths = await collectFilePathsIn(coursePath);
-    console.log("creating blobs")
+    console.log("creating blobs");
     const filesBlobs = await Promise.all(filesPaths.map(createBlobForFile(octo, org, repo)));
-    console.log("calculating relative paths")
+    console.log("calculating relative paths");
     const pathsForBlobs = filesPaths.map(fullPath => path.relative(coursePath, fullPath));
-    console.log("creating tree")
+    console.log("creating tree");
     const newTree = await createNewTree(octo, org, repo, filesBlobs, pathsForBlobs, currentCommit.treeSha);
-    console.log("creating new commit")
+    console.log("creating new commit");
     const commitMessage = `branch: ${branch}`;
     const newCommit = await createNewCommit(octo, org, repo, commitMessage, newTree.sha, currentCommit.commitSha);
-    console.log("setting branch to commit")
-   
+    console.log("setting branch to commit");
+
     await octo.git.createRef({
         owner: org,
         repo,
@@ -138,7 +143,13 @@ const createNewCommit = async (
         })
     ).data;
 
-const setBranchToCommit = async (octo: Octokit, org: string, repo: string, branch: string = `main`, commitSha: string) =>
+const setBranchToCommit = async (
+    octo: Octokit,
+    org: string,
+    repo: string,
+    branch: string = `main`,
+    commitSha: string,
+) =>
     await octo.git.updateRef({
         owner: org,
         repo,

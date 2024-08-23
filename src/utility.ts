@@ -54,7 +54,7 @@ export const validate_utility_version = (version: string, kill = true) => {
 export const get_combined = (version: string) => {
     return Number(version.split(".").join(""));
 };
-export const validate_utility_name = (util_name: string, kill =true) => {
+export const validate_utility_name = (util_name: string, kill = true) => {
     if (!util_name.match(/^[_\-a-zA-Z][_\-a-zA-Z0-9]{4,}$/)) {
         (kill ? logger.fatal : logger.error)(
             'utility name is not valid it should only contain english characters and "_" or "-" and it should not start with number',

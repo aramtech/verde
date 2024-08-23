@@ -416,7 +416,7 @@ export async function create_repository_in_org(org: string, repo: string) {
                 private: true, // Set to true if you want to create a private repository
             });
             loadingSpinner.clear();
- 
+
             Logger.success("Repository created successfully in the organization:", response.data?.html_url);
         } catch (error) {
             Logger.fatal("Error creating repository:", error);
@@ -670,7 +670,13 @@ export async function upload_directory_to_repo(
 }
 
 // dont use
-export async function forceUploadFileToRepo(owner: string, repo: string, filePath: string, content: string, branch: string) {
+export async function forceUploadFileToRepo(
+    owner: string,
+    repo: string,
+    filePath: string,
+    content: string,
+    branch: string,
+) {
     try {
         let sha;
         const octokit = await get_octokit_client_for_org();
@@ -816,7 +822,6 @@ export const compare_version = (version_a: string, operation: "==" | "<" | ">" |
     }
 };
 
-
 export const pull_utility = async (utility_name: string, version?: string) => {
     /**
      *  - check if the utility has remote version
@@ -881,7 +886,7 @@ export const pull_utility = async (utility_name: string, version?: string) => {
     };
     const up_to_date = async () => {
         logger.success("utility", utility_name, "Up to date");
-        return
+        return;
     };
 
     if (!util) {
@@ -899,13 +904,13 @@ export const pull_utility = async (utility_name: string, version?: string) => {
                 await pull();
             } else if (compare_version(selected_version.version, "<", util.configFile.version)) {
                 logger.warning("you local version is greater than remote latest, please push updates");
-                return
+                return;
             } else {
                 return up_to_date();
             }
         }
     }
-}
+};
 
 export const pull_all_utilities = async () => {
     const utilities = await listUtilitiesInDirectory(await find_project_root());
