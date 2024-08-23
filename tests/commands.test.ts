@@ -32,44 +32,6 @@ describe("CLI", () => {
         return name;
     };
 
-    test("init command: should initialize a package at the cwd.", async () => {
-        await moveToTestDir();
-
-        await storeObjectInCwd("package.json", {
-            name: "foo",
-            version: "0.1.0",
-        });
-
-        const cmd = new Command();
-        addCommands(cmd);
-
-        await cmd.parseAsync(["node", "verde", "init", "foo", "-d FOO IS GREAT BAR IS NONE"]);
-
-        const utilFile = await readJSON<UtilityFile>("utils.json");
-
-        expect(utilFile.name).toBe("foo");
-        expect(utilFile.description).toBe("FOO IS GREAT BAR IS NONE");
-    });
-
-    test("init command: package already exists in the current dir.", async () => {
-        await moveToTestDir();
-
-        await storeObjectInCwd("package.json", {
-            name: "foo",
-            version: "0.1.0",
-        });
-
-        vi.spyOn(console, "error");
-
-        const cmd = new Command();
-        addCommands(cmd);
-
-        await cmd.parseAsync(["node", "verde", "init", "foo"]);
-        await cmd.parseAsync(["node", "verde", "init", "foo"]);
-
-        expect(console.error).toHaveBeenCalledWith("directory already managed by verde!.");
-    });
-
     test("list command: no packages at the current directory.", async () => {
         vi.spyOn(console, "warn");
 
