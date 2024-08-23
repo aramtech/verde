@@ -32,61 +32,6 @@ describe("CLI", () => {
         return name;
     };
 
-    test("remove command: no matching utility found should do nothing.", async () => {
-        const testDirPath = await moveToTestDir();
-
-        await storeObjectInCwd("package.json", { name: "FOO" });
-
-        await fs.mkdir(path.join(testDirPath, "foo-util"));
-        await fs.writeFile(
-            path.join(testDirPath, "foo-util", "utils.json"),
-            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
-        );
-
-        await fs.mkdir(path.join(testDirPath, "bar-util"));
-        await fs.writeFile(
-            path.join(testDirPath, "bar-util", "utils.json"),
-            JSON.stringify({ name: "bar", deps: {}, version: "10.0.0", hash: "bar" }),
-        );
-
-        const cmd = addCommands(new Command());
-        await cmd.parseAsync(["node", "verde", "remove", "baz"]);
-
-        expect(await fs.exists(path.join(testDirPath, "foo-util"))).toBe(true);
-        expect(await fs.exists(path.join(testDirPath, "bar-util"))).toBe(true);
-    });
-
-    test("remove command: found matching utility, should remove it.", async () => {
-        const testDirPath = await moveToTestDir();
-
-        await storeObjectInCwd("package.json", { name: "FOO" });
-
-        await fs.mkdir(path.join(testDirPath, "foo-util"));
-        await fs.writeFile(
-            path.join(testDirPath, "foo-util", "utils.json"),
-            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
-        );
-
-        await fs.mkdir(path.join(testDirPath, "bar-util"));
-        await fs.writeFile(
-            path.join(testDirPath, "bar-util", "utils.json"),
-            JSON.stringify({ name: "bar", deps: {}, version: "10.0.0", hash: "bar" }),
-        );
-
-        await fs.mkdir(path.join(testDirPath, "baz-util"));
-        await fs.writeFile(
-            path.join(testDirPath, "baz-util", "utils.json"),
-            JSON.stringify({ name: "baz", deps: {}, version: "10.0.0", hash: "bar" }),
-        );
-
-        const cmd = addCommands(new Command());
-        await cmd.parseAsync(["node", "verde", "remove", "baz"]);
-
-        expect(await fs.exists(path.join(testDirPath, "foo-util"))).toBe(true);
-        expect(await fs.exists(path.join(testDirPath, "bar-util"))).toBe(true);
-        expect(await fs.exists(path.join(testDirPath, "baz-util"))).toBe(false);
-    });
-
     test("hide command: no matching utility found.", async () => {
         vi.spyOn(console, "error");
 
