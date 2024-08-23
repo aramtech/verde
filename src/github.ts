@@ -12,13 +12,6 @@ import { chunkArr, getUtilityByName, listUtilitiesInDirectory } from "./project.
 import { read_answer_to, read_choice } from "./prompt.js";
 import { validate_utility_version } from "./utility.ts";
 
-export const checkIfNameIsAvailable = async (name: string) => {
-    const utils = await listUtilitiesInDirectory(await find_project_root());
-    if (utils.find(u => u.configFile.name == name)) {
-        return false;
-    }
-    return true;
-};
 export const org_name_to_api_link = (repo_name: string) => `https://api.github.com/orgs/${repo_name}`;
 export const repo_name_to_api_link = (repo_name: string) => `https://api.github.com/repos/${repo_name}`;
 

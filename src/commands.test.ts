@@ -35,6 +35,11 @@ describe("CLI", () => {
     test("init command: should initialize a package at the cwd.", async () => {
         await moveToTestDir();
 
+        await storeObjectInCwd("package.json", {
+            name: "foo",
+            version: "0.1.0",
+        });
+
         const cmd = new Command();
         addCommands(cmd);
 
@@ -48,6 +53,11 @@ describe("CLI", () => {
 
     test("init command: package already exists in the current dir.", async () => {
         await moveToTestDir();
+
+        await storeObjectInCwd("package.json", {
+            name: "foo",
+            version: "0.1.0",
+        });
 
         vi.spyOn(console, "error");
 
@@ -350,7 +360,7 @@ describe("CLI", () => {
 
         while (i > 0) {
             const name = `foo-${i}`;
-            expect(console.log).toHaveBeenCalledWith(`utility "${name}" hash match!.`);
+            expect(console.log).toHaveBeenCalledWith(`utility "${name}" hash match!. no changes detected`);
             i--;
         }
     });

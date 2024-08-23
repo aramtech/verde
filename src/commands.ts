@@ -22,7 +22,7 @@ import { validate_utility_version } from "./utility";
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
-        const utils = await listUtilitiesInDirectory();
+        const utils = await listUtilitiesInDirectory(".");
 
         if (utils.length === 0) {
             console.warn("no tool found!.");
@@ -123,6 +123,7 @@ const addPullCommand = (program: Command) =>
 const add_list_utility_versions = (program: Command) => {
     program.command("list-versions <utility_name>").action(async (utility_name: string) => {
         const util = await getUtilityByName(utility_name);
+
         if (!util) {
             logger.fatal("Utility not found");
             return;
@@ -132,10 +133,10 @@ const add_list_utility_versions = (program: Command) => {
         const versions = await get_utility_versions(record.org_name, util.configFile.name);
 
         const found_version = versions.find(v => v.version == util.configFile.version);
+
         if (!found_version) {
             logger.success("current version is not found remotely: ", util.configFile.version);
-        }
-        if (!versions.length) {
+        } else if (!versions.length) {
             logger.warning("\nthis utility has no releases.");
         }
 
