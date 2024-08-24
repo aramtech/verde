@@ -71,7 +71,7 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
 export const readFiles = async (paths: string[]) => await Promise.all(paths.map(f => fs.readFileSync(f)));
 
 export const storeObjectInCwd = async <T>(nameOrPath: string, object: T) =>
-    await fs.writeFileSync(nameOrPath, JSON.stringify(object));
+    await fs.writeFileSync(nameOrPath, JSON.stringify(object, null, 4));
 
 export const isStoredOnDisk = async (nameOrPath: string) => await fs.existsSync(nameOrPath);
 
