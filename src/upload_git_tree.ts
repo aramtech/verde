@@ -3,11 +3,19 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import { find_project_root } from "./fs";
-import { compare_version, deleteBranchOnFailure, get_file_from_repo, get_org_name_and_token, get_utility_versions, type SingleGithubFile } from "./github";
+import {
+    compare_version,
+    deleteBranchOnFailure,
+    get_file_from_repo,
+    get_org_name_and_token,
+    get_utility_versions,
+    type SingleGithubFile,
+} from "./github";
 import logger from "./logger";
 import { checkUtility, listUtilitiesInDirectory } from "./project";
 import { upload_dir_octo } from "./push_directory";
-import { validate_utility_name, validate_utility_version } from "./utility";
+import { isUtilityNameValid, parseUtilityVersion } from "./utility";
+
 // Helper to read directory contents recursively
 export async function readDirectoryRecursive(dirPath: string) {
     const files = [] as string[];
@@ -116,7 +124,7 @@ async function is_repo_empty(org: string, repo: string, token: string) {
 }
 
 async function setup_empty_repo(org_name: string, repo_name: string, branch: string, token: string) {
-    async function initializeRepo(orgName:string, repoName:string, branchName:string, token: string) {
+    async function initializeRepo(orgName: string, repoName: string, branchName: string, token: string) {
         const octokit = new Octokit({ auth: token });
 
         // The file to add to the initial commit
@@ -174,7 +182,7 @@ async function setup_empty_repo(org_name: string, repo_name: string, branch: str
 
             console.log(`Branch ${branchName} created with initial commit.`);
         } catch (error: any) {
-            throw error
+            throw error;
         }
     }
     await initializeRepo(org_name, repo_name, branch, token);
@@ -303,50 +311,59 @@ export const push_utility = async (utility_name: string) => {
      *       - if current less than remote prompt that you are not up to date remote version is greater --
      *
      */
-    console.log("listing all utilities")
+    console.log("listing all utilities");
     const utils = await listUtilitiesInDirectory(await find_project_root());
 
-    console.log("looking for util")
+    console.log("looking for util");
     const util = utils.find(u => u.configFile.name == utility_name);
 
     if (!util) {
         logger.fatal('utility named "', utility_name, '" is not found');
         return;
     }
-    
-    console.log("updating utility hash")
+
+    console.log("updating utility hash");
     const hash = await checkUtility(util.configFile.name);
     util.configFile.hash = hash.currentHash;
-
 
     if (util.configFile.private) {
         logger.warning(`this utility ${utility_name} is private it cannot be uploaded`);
         return;
     }
 
-    console.log("validating version")
-    validate_utility_version(util.configFile.version || "", true);
-    console.log("validating name")
-    validate_utility_name(util.configFile.name);
- 
-    console.log("getting org and token")
+    console.log("validating version");
+    if (!parseUtilityVersion(util.configFile.version)) {
+        logger.fatal(`${util.configFile.version} is not a valid version`);
+        return;
+    }
+
+    console.log("validating name");
+    if (!isUtilityNameValid(util.configFile.name)) {
+        logger.fatal(`"${util.configFile.name}" is not a valid name.`);
+        return;
+    }
+
+    console.log("getting org and token");
     const record = await get_org_name_and_token();
-    
-    console.log("collecting utility versions")
+
+    console.log("collecting utility versions");
     let utility_versions = await get_utility_versions(record.org_name, util.configFile.name);
-    
 
     const last_version = utility_versions.at(-1);
 
     const push = async () => {
-        console.log("pushing...")
+        console.log("pushing...");
         try {
             // upload the file as a block to a new branch
             await upload_dir_octo(
-                record.org_name, util.configFile.name, record.token, util.configFile.version, util.path
+                record.org_name,
+                util.configFile.name,
+                record.token,
+                util.configFile.version,
+                util.path,
             );
         } catch (error) {
-            console.error(error)
+            console.error(error);
             await deleteBranchOnFailure(record.org_name, util.configFile.name, util.configFile.version);
         }
     };
@@ -370,7 +387,7 @@ export const push_utility = async (utility_name: string) => {
                     utility: last_version.version,
                     name: util.configFile.name,
                 });
-                await push()
+                await push();
                 return;
             }
             const remote_util_config: typeof util.configFile = JSON.parse(
@@ -385,7 +402,7 @@ export const push_utility = async (utility_name: string) => {
             } else {
                 logger.success(`utility ${util.configFile.name} is up to date: ${util.configFile.version}`);
             }
-            return
+            return;
         }
     } else {
         return await push();

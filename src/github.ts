@@ -10,17 +10,18 @@ import { loadingSpinner, default as Logger, default as logger } from "./logger.j
 import { CPU_COUNT } from "./os.ts";
 import { chunkArr, getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
 import { read_answer_to, read_choice } from "./prompt.js";
-import { validate_utility_version } from "./utility.ts";
+import { parseUtilityVersion, type Version } from "./utility.ts";
 
-export const checkIfNameIsAvailable = async (name: string) => {
-    const utils = await listUtilitiesInDirectory(await find_project_root());
-    if (utils.find(u => u.configFile.name == name)) {
-        return false;
-    }
-    return true;
-};
 export const org_name_to_api_link = (repo_name: string) => `https://api.github.com/orgs/${repo_name}`;
 export const repo_name_to_api_link = (repo_name: string) => `https://api.github.com/repos/${repo_name}`;
+
+const assertVersionIsValid = (v: string): Version => {
+    const parsed = parseUtilityVersion(v);
+    if (!parsed) {
+        logger.fatal(`${v} is not a valid version.`);
+    }
+    return parsed as Version;
+};
 
 const download_repo_files = async (
     repo_name: string,
@@ -416,7 +417,7 @@ export async function create_repository_in_org(org: string, repo: string) {
                 private: true, // Set to true if you want to create a private repository
             });
             loadingSpinner.clear();
- 
+
             Logger.success("Repository created successfully in the organization:", response.data?.html_url);
         } catch (error) {
             Logger.fatal("Error creating repository:", error);
@@ -446,23 +447,19 @@ export async function get_utility_versions(owner: string, utility: string) {
     const branches = await list_branches(owner, utility);
     if (branches) {
         const versions_branches = branches
-            .map(b => {
-                try {
-                    const v = validate_utility_version(b.name, false);
-                    return v;
-                } catch (error) {
-                    return null;
-                }
-            })
+            .map(b => parseUtilityVersion(b.name))
             .filter(v => !!v)
             .sort((a, b) => {
-                if (compare_version(a.version, ">", b.version)) {
+                const left = a as Version;
+                const right = b as Version;
+
+                if (compare_version(left.version, ">", right.version)) {
                     return 1;
-                } else if (compare_version(a.version, "<", b.version)) {
+                } else if (compare_version(left.version, "<", right.version)) {
                     return -1;
-                } else {
-                    return 0;
                 }
+
+                return 0;
             });
         return versions_branches;
     }
@@ -670,7 +667,13 @@ export async function upload_directory_to_repo(
 }
 
 // dont use
-export async function forceUploadFileToRepo(owner: string, repo: string, filePath: string, content: string, branch: string) {
+export async function forceUploadFileToRepo(
+    owner: string,
+    repo: string,
+    filePath: string,
+    content: string,
+    branch: string,
+) {
     try {
         let sha;
         const octokit = await get_octokit_client_for_org();
@@ -768,8 +771,8 @@ export type SingleGithubFile = {
 };
 
 export const compare_version = (version_a: string, operation: "==" | "<" | ">" | "<=" | ">=", version_b: string) => {
-    const a = validate_utility_version(version_a);
-    const b = validate_utility_version(version_b);
+    const a = assertVersionIsValid(version_a);
+    const b = assertVersionIsValid(version_b);
 
     if (operation == "<") {
         if (a.major != b.major) {
@@ -778,7 +781,7 @@ export const compare_version = (version_a: string, operation: "==" | "<" | ">" |
         if (a.minor != b.minor) {
             return a.minor < b.minor;
         }
-        return a.batch < b.batch;
+        return a.patch < b.patch;
     }
 
     if (operation == "<=") {
@@ -788,7 +791,7 @@ export const compare_version = (version_a: string, operation: "==" | "<" | ">" |
         if (a.minor != b.minor) {
             return a.minor <= b.minor;
         }
-        return a.batch <= b.batch;
+        return a.patch <= b.patch;
     }
 
     if (operation == "==") {
@@ -802,7 +805,7 @@ export const compare_version = (version_a: string, operation: "==" | "<" | ">" |
         if (a.minor != b.minor) {
             return a.minor >= b.minor;
         }
-        return a.batch >= b.batch;
+        return a.patch >= b.patch;
     }
 
     if (operation == ">") {
@@ -812,10 +815,9 @@ export const compare_version = (version_a: string, operation: "==" | "<" | ">" |
         if (a.minor != b.minor) {
             return a.minor > b.minor;
         }
-        return a.batch > b.batch;
+        return a.patch > b.patch;
     }
 };
-
 
 export const pull_utility = async (utility_name: string, version?: string) => {
     /**
@@ -850,15 +852,9 @@ export const pull_utility = async (utility_name: string, version?: string) => {
         logger.fatal("Remote Utility is not detected, and have no versions");
         return;
     }
-    let selected_version: {
-        version: string;
-        major: number;
-        minor: number;
-        batch: number;
-        combined: number;
-    };
+    let selected_version: Version;
     if (version) {
-        const found_version = versions.find(v => v.version == version);
+        const found_version = versions.find(v => (v as Version).version == version);
         if (!found_version) {
             logger.fatal("Specified version", version, "is not found remotely");
             return;
@@ -869,7 +865,7 @@ export const pull_utility = async (utility_name: string, version?: string) => {
             version: string;
             major: number;
             minor: number;
-            batch: number;
+            patch: number;
             combined: number;
         };
     }
@@ -881,7 +877,7 @@ export const pull_utility = async (utility_name: string, version?: string) => {
     };
     const up_to_date = async () => {
         logger.success("utility", utility_name, "Up to date");
-        return
+        return;
     };
 
     if (!util) {
@@ -899,13 +895,13 @@ export const pull_utility = async (utility_name: string, version?: string) => {
                 await pull();
             } else if (compare_version(selected_version.version, "<", util.configFile.version)) {
                 logger.warning("you local version is greater than remote latest, please push updates");
-                return
+                return;
             } else {
                 return up_to_date();
             }
         }
     }
-}
+};
 
 export const pull_all_utilities = async () => {
     const utilities = await listUtilitiesInDirectory(await find_project_root());

@@ -20,14 +20,14 @@ const color_text = (
     return `${colors[color]}${text.join(" ")}${colors.console_color}`;
 };
 
-const spin_wrapper = (cp: (...args: any[]) => any) => {
+const spin_wrapper = <T>(cp: (...args: any[]) => T): T => {
     if (loadingSpinner.isSpinning) {
         loadingSpinner.clear();
-        cp();
+        const res = cp();
         loadingSpinner.clear();
-        return;
+        return res;
     }
-    cp();
+    return cp();
 };
 
 export const error = (...message: any[]) => {
@@ -48,8 +48,8 @@ export const warning = (...message: any[]) => {
     });
 };
 
-export const fatal = (...message: any[]) => {
-    spin_wrapper(() => {
+export const fatal = (...message: any[]): never => {
+    return spin_wrapper<never>(() => {
         console.error(...message);
         process.exit(1);
     });

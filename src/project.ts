@@ -10,7 +10,6 @@ import {
     removeDir,
     storeObjectInCwd,
 } from "./fs";
-import { checkIfNameIsAvailable } from "./github";
 import logger from "./logger";
 import { CPU_COUNT } from "./os";
 import { push_utility } from "./upload_git_tree";
@@ -23,12 +22,8 @@ type UtilityDescription = {
     path: string;
     files: string[];
 };
-const project_root = await find_project_root();
-let utilities_cache: UtilityDescription[] | null = null;
-export const listUtilitiesInDirectory = async (projectPath: string = project_root): Promise<UtilityDescription[]> => {
-    if (projectPath == project_root && utilities_cache) {
-        return utilities_cache;
-    }
+
+export const listUtilitiesInDirectory = async (projectPath: string): Promise<UtilityDescription[]> => {
     const traverseResult = await collectDirsWithFile(projectPath, {
         exclude: ["node_modules", ".git", "dist"],
         configFilename: configFilename,
@@ -44,10 +39,6 @@ export const listUtilitiesInDirectory = async (projectPath: string = project_roo
             files: tr.contents,
             path: tr.dirPath,
         });
-    }
-
-    if (projectPath == project_root) {
-        utilities_cache = descArr;
     }
 
     return descArr;
@@ -70,7 +61,7 @@ export const initNewUtility = async (name: string, description: string) => {
         return;
     }
 
-    const nameNotAvailable = (await checkIfNameIsAvailable(name)) === false;
+    const nameNotAvailable = utils.some(u => u.configFile.name === name);
 
     if (nameNotAvailable) {
         console.error("name taken by a different utility.");
@@ -97,7 +88,11 @@ export const initNewUtility = async (name: string, description: string) => {
     });
 };
 
-export const removeUtilityFromProject = async (name: string, projectPath = project_root) => {
+export const removeUtilityFromProject = async (name: string, projectPath?: string) => {
+    if (!projectPath) {
+        projectPath = await find_project_root();
+    }
+
     const utils = await listUtilitiesInDirectory(projectPath);
 
     for (const util of utils) {
@@ -110,7 +105,8 @@ export const removeUtilityFromProject = async (name: string, projectPath = proje
 };
 
 export const getUtilityByName = async (name: string): Promise<UtilityDescription | undefined> => {
-    const utils = await listUtilitiesInDirectory(await find_project_root());
+    const projectRoot = await find_project_root();
+    const utils = await listUtilitiesInDirectory(projectRoot);
     return utils.find(u => u.configFile.name === name);
 };
 

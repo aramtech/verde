@@ -18,11 +18,11 @@ import {
     revealUtilityInProject,
 } from "./project";
 import { push_utility } from "./upload_git_tree";
-import { validate_utility_version } from "./utility";
+import { parseUtilityVersion, type Version } from "./utility";
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
-        const utils = await listUtilitiesInDirectory();
+        const utils = await listUtilitiesInDirectory(".");
 
         if (utils.length === 0) {
             console.warn("no tool found!.");
@@ -81,13 +81,16 @@ const addDeleteBranchVersion = (program: Command) =>
     program.command("delete-version <utility_name> <version>").action(async (utility_name, version: string) => {
         const record = await get_org_name_and_token();
         const util = await getUtilityByName(utility_name);
-        const validated_version = validate_utility_version(version);
-        if (!util) {
+
+        if (!parseUtilityVersion(version)) {
+            logger.fatal(`${version} is not a valid version`);
+            return;
+        } else if (!util) {
             logger.fatal("utility does not exist");
             return;
         }
         const utility_available_versions = await get_utility_versions(record.org_name, util.configFile.name);
-        const found_version = utility_available_versions.find(v => v.version == version);
+        const found_version = utility_available_versions.find(v => (v as Version).version == version);
         if (!found_version) {
             logger.fatal("Version is not found");
             return;
@@ -107,8 +110,10 @@ const addPullCommand = (program: Command) =>
                 },
             ) => {
                 const { version } = options;
-                if (version) {
-                    validate_utility_version(version);
+
+                if (version && !parseUtilityVersion(version)) {
+                    logger.fatal(`${version} is not a valid version`);
+                    return;
                 }
 
                 if (name) {
@@ -120,9 +125,10 @@ const addPullCommand = (program: Command) =>
             },
         );
 
-const add_list_utility_versions = (program: Command) => {
+const addListUtilityVersions = (program: Command) => {
     program.command("list-versions <utility_name>").action(async (utility_name: string) => {
         const util = await getUtilityByName(utility_name);
+
         if (!util) {
             logger.fatal("Utility not found");
             return;
@@ -131,15 +137,15 @@ const add_list_utility_versions = (program: Command) => {
         const record = await get_org_name_and_token();
         const versions = await get_utility_versions(record.org_name, util.configFile.name);
 
-        const found_version = versions.find(v => v.version == util.configFile.version);
+        const found_version = versions.find(v => (v as Version).version == util.configFile.version);
+
         if (!found_version) {
             logger.success("current version is not found remotely: ", util.configFile.version);
-        }
-        if (!versions.length) {
+        } else if (!versions.length) {
             logger.warning("\nthis utility has no releases.");
         }
 
-        for (const version of versions) {
+        for (const version of versions as Version[]) {
             logger.log(version.version == util.configFile.version ? `[${version.version}]` : `${version.version}`);
         }
     });
@@ -154,7 +160,7 @@ export const addCommands = (program: Command) => {
     addHideCommand(program);
     addRevealCommand(program);
     addCheckCommand(program);
-    add_list_utility_versions(program);
+    addListUtilityVersions(program);
     addDeleteBranchVersion(program);
     return program;
 };
