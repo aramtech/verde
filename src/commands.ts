@@ -21,6 +21,7 @@ import {
 } from "./project";
 import { push_utility } from "./upload_git_tree";
 import { parseUtilityVersion, type Version } from "./utility";
+import { clearCachedItems, listCachedItems } from "./cache";
 
 const addConfigCommandToProgram = (program: Command) =>
     program.command("config").action(async () => {
@@ -169,6 +170,19 @@ const addListUtilityVersions = (program: Command) => {
     });
 };
 
+const addCacheCommands = (program: Command) =>
+    program
+        .command("cache [action]")
+        .description("cache control command")
+        .action(async (action: "list" | "clear" | string = "list") => {
+            if (action === "clear") {
+                await clearCachedItems();
+                return;
+            }
+
+            await listCachedItems();
+        });
+
 export const addCommands = (program: Command) => {
     addInitCommand(program);
     addListToProgram(program);
@@ -181,5 +195,7 @@ export const addCommands = (program: Command) => {
     addListUtilityVersions(program);
     addDeleteBranchVersion(program);
     addConfigCommandToProgram(program);
+    addCacheCommands(program);
+
     return program;
 };

@@ -46,7 +46,16 @@ export const isFileStored = async (name: string): Promise<boolean> => {
     return await fs.exists(nameToPath(name));
 };
 
-export const getStoredFiles = async () => {
+export const getStoredFileNames = async () => {
     const verdeDirPath = getVerdeDirPath();
     return await fs.readdir(verdeDirPath);
+};
+
+export const removeFilesFromStorage = async (...names: string[]): Promise<void> => {
+    const paths = names.map(nameToPath);
+    const chunkedPaths = chunkArr(paths, CPU_COUNT * 4);
+
+    for (const paths of chunkedPaths) {
+        await Promise.all(paths.map(async p => await fs.remove(p)));
+    }
 };
