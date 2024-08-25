@@ -92,8 +92,6 @@ export const assembleProjectContext = async (path: string): Promise<ProjectConte
             verde,
         };
 
-        storeObjectInCwd<PackageFile>(join(rootPath, "package.json"), packageFileWithVerde);
-
         return {
             utilities,
             utilitiesInCwd,
@@ -268,4 +266,8 @@ export const pushAllUtilities = async (context: ProjectContext) => {
     for (const chunk of chunked) {
         await Promise.all(chunk.map(c => push_utility(context, c.configFile.name)));
     }
+};
+
+export const addConfigToProjectPackageFile = async (context: ProjectContext) => {
+    await storeObjectInCwd<PackageFile>(join(context.path, "package.json"), context.packageFile);
 };

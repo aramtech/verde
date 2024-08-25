@@ -17,9 +17,17 @@ import {
     initNewUtility,
     removeUtilityFromProject,
     revealUtilityInProject,
+    addConfigToProjectPackageFile,
 } from "./project";
 import { push_utility } from "./upload_git_tree";
 import { parseUtilityVersion, type Version } from "./utility";
+
+const addConfigCommandToProgram = (program: Command) =>
+    program.command("config").action(async () => {
+        const context = await assembleProjectContext(".");
+
+        addConfigToProjectPackageFile(context);
+    });
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
