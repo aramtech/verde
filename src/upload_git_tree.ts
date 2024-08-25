@@ -12,7 +12,7 @@ import {
     type SingleGithubFile,
 } from "./github";
 import logger from "./logger";
-import { checkUtility, listUtilitiesInDirectory } from "./project";
+import { checkUtility, listUtilitiesInDirectory, type ProjectContext } from "./project";
 import { upload_dir_octo } from "./push_directory";
 import { isUtilityNameValid, parseUtilityVersion } from "./utility";
 
@@ -287,7 +287,7 @@ export async function upload_directory(
     }
 }
 
-export const push_utility = async (utility_name: string) => {
+export const push_utility = async (context: ProjectContext, utility_name: string) => {
     /**
      * - make sure utility actually exists --
      * - validate version number --
@@ -312,7 +312,7 @@ export const push_utility = async (utility_name: string) => {
      *
      */
     console.log("listing all utilities");
-    const utils = await listUtilitiesInDirectory(await find_project_root());
+    const utils = context.utilities;
 
     console.log("looking for util");
     const util = utils.find(u => u.configFile.name == utility_name);
@@ -323,7 +323,7 @@ export const push_utility = async (utility_name: string) => {
     }
 
     console.log("updating utility hash");
-    const hash = await checkUtility(util.configFile.name);
+    const hash = await checkUtility(context, util.configFile.name);
     util.configFile.hash = hash.currentHash;
 
     if (util.configFile.private) {

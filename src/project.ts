@@ -217,11 +217,10 @@ export const checkAllUtilities = async (context: ProjectContext) => {
     }
 };
 
-export const pushAllUtilities = async () => {
-    const utilities = await listUtilitiesInDirectory(await find_project_root());
-    const chunked = chunkArr(utilities, CPU_COUNT * 2);
+export const pushAllUtilities = async (context: ProjectContext) => {
+    const chunked = chunkArr(context.utilities, CPU_COUNT * 2);
 
     for (const chunk of chunked) {
-        await Promise.all(chunk.map(c => push_utility(c.configFile.name)));
+        await Promise.all(chunk.map(c => push_utility(context, c.configFile.name)));
     }
 };

@@ -52,12 +52,15 @@ const addRemoveUtilityCommand = (program: Command) =>
 
 const addPushUtilityCommand = (program: Command) =>
     program.command("push [name]").action(async (utility_name?: string) => {
+        const context = await assembleProjectContext(process.cwd());
+
         if (utility_name) {
             console.log("pushing single");
-            await push_utility(utility_name);
+            await push_utility(context, utility_name);
             return;
         }
-        await pushAllUtilities();
+
+        await pushAllUtilities(context);
     });
 
 const addHideCommand = (program: Command) =>
