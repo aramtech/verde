@@ -44,6 +44,23 @@ export const listUtilitiesInDirectory = async (projectPath: string): Promise<Uti
     return descArr;
 };
 
+export type ProjectContext<Params> = {
+    utilities: UtilityDescription[];
+    path: string;
+    params: Params;
+};
+
+export const assembleProjectContext = async <T>(path: string, params: T): Promise<ProjectContext<T>> => {
+    const utilities = await listUtilitiesInDirectory(path);
+    const rootPath = await find_project_root(path);
+
+    return {
+        utilities,
+        path: rootPath,
+        params,
+    };
+};
+
 export const initNewUtility = async (name: string, description: string) => {
     if (await isStoredOnDisk(configFilename)) {
         console.error("directory already managed by verde!.");
