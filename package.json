@@ -1,46 +1,46 @@
 {
-  "name": "verde",
-  "module": "index.ts",
-  "type": "module",
-  "scripts": {
-    "fmt": "prettier . --write",
-    "test": "vitest"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/fs-extra": "^11.0.4",
-    "@types/unzipper": "^0.10.10",
-    "prettier": "^3.3.3",
-    "vitest": "^2.0.5"
-  },
-  "bin": {
-    "verde": "./src/main.ts"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  },
-  "prettier": {
-    "semi": true,
-    "arrowParens": "avoid",
-    "singleQuote": false,
-    "jsxSingleQuote": false,
-    "tabWidth": 4,
-    "printWidth": 120
-  },
-  "dependencies": {
-    "@octokit/rest": "^21.0.2",
-    "axios": "^1.7.4",
-    "commander": "^12.1.0",
-    "enquirer": "^2.4.1",
-    "fs-extra": "^11.2.0",
-    "globby": "^14.0.2",
-    "install": "^0.13.0",
-    "ora": "^8.0.1",
-    "unzipper": "^0.12.3"
-  },
-  "jest": {
-    "resetModules": true,
-    "verbose": true,
-    "resetMocks": true
-  }
+    "name": "verde",
+    "module": "index.ts",
+    "type": "module",
+    "scripts": {
+        "fmt": "prettier . --write",
+        "test": "vitest"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "@types/fs-extra": "^11.0.4",
+        "@types/unzipper": "^0.10.10",
+        "prettier": "^3.3.3",
+        "vitest": "^2.0.5"
+    },
+    "bin": {
+        "verde": "./src/main.ts"
+    },
+    "peerDependencies": {
+        "typescript": "^5.0.0"
+    },
+    "prettier": {
+        "semi": true,
+        "arrowParens": "avoid",
+        "singleQuote": false,
+        "jsxSingleQuote": false,
+        "tabWidth": 4,
+        "printWidth": 120
+    },
+    "dependencies": {
+        "@octokit/rest": "^21.0.2",
+        "axios": "^1.7.4",
+        "commander": "^12.1.0",
+        "enquirer": "^2.4.1",
+        "fs-extra": "^11.2.0",
+        "globby": "^14.0.2",
+        "install": "^0.13.0",
+        "ora": "^8.0.1",
+        "unzipper": "^0.12.3"
+    },
+    "jest": {
+        "resetModules": true,
+        "verbose": true,
+        "resetMocks": true
+    }
 }

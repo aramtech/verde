@@ -270,4 +270,5 @@ export const pushAllUtilities = async (context: ProjectContext) => {
 
 export const addConfigToProjectPackageFile = async (context: ProjectContext) => {
     await storeObjectInCwd<PackageFile>(join(context.path, "package.json"), context.packageFile);
+    console.log("Your verde config: \n", JSON.stringify(context.packageFile.verde, undefined, 4));
 };

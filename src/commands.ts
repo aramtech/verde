@@ -180,5 +180,6 @@ export const addCommands = (program: Command) => {
     addCheckCommand(program);
     addListUtilityVersions(program);
     addDeleteBranchVersion(program);
+    addConfigCommandToProgram(program);
     return program;
 };
