@@ -8,9 +8,10 @@ import { command_on_system, run_command } from "./exec.js";
 import { collectFilePathsIn, find_project_root, readJSON, storeJSON } from "./fs.ts";
 import { loadingSpinner, default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
-import { chunkArr, getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
+import { getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
 import { read_answer_to, read_choice } from "./prompt.js";
 import { parseUtilityVersion, type Version } from "./utility.ts";
+import { chunkArr } from "./utils/array.ts";
 
 export const org_name_to_api_link = (repo_name: string) => `https://api.github.com/orgs/${repo_name}`;
 export const repo_name_to_api_link = (repo_name: string) => `https://api.github.com/repos/${repo_name}`;

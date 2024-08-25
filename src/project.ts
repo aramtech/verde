@@ -14,6 +14,7 @@ import logger from "./logger";
 import { CPU_COUNT } from "./os";
 import { push_utility } from "./upload_git_tree";
 import { type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash } from "./utility";
+import { chunkArr } from "./utils/array";
 
 const utilityConfigFileName = "utils.json";
 
@@ -230,26 +231,6 @@ export const checkUtility = async (context: ProjectContext, nameOrDesc: string |
         previousHash,
         match: currentHash === previousHash,
     };
-};
-
-export const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
-    let result: T[][] = [];
-    let currentChunk: T[] = [];
-
-    for (const item of arr) {
-        currentChunk.push(item);
-
-        if (currentChunk.length === chunkSize) {
-            result = [...result, currentChunk];
-            currentChunk = [];
-        }
-    }
-
-    if (currentChunk.length) {
-        result = [...result, currentChunk];
-    }
-
-    return result;
 };
 
 export const checkAllUtilities = async (context: ProjectContext) => {

@@ -31,7 +31,7 @@ export const getFileFromStorage = async (name: string): Promise<Buffer> => {
     return await fs.readFile(filepath);
 };
 
-export const isStored = async (name: string): Promise<boolean> => {
+export const isFileStored = async (name: string): Promise<boolean> => {
     createStorageDirectoryIfNotExists();
     return await fs.exists(nameToPath(name));
 };
