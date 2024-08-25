@@ -14,7 +14,7 @@ import logger from "./logger";
 import { CPU_COUNT } from "./os";
 import { push_utility } from "./upload_git_tree";
 import { type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash } from "./utility";
-import { chunkArr } from "./utils/array";
+import { chunkArr } from "./array";
 
 const utilityConfigFileName = "utils.json";
 
