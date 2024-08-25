@@ -73,10 +73,10 @@ export type ProjectContext = {
 const selectUtilityByName = (ctx: ProjectContext, name: string): UtilityDescription | undefined =>
     ctx.utilities.find(u => u.configFile.name === name);
 
-export const assembleProjectContext = async (path: string): Promise<ProjectContext> => {
-    const rootPath = await find_project_root(path);
+export const assembleProjectContext = async (pathOrCwd: string): Promise<ProjectContext> => {
+    const rootPath = await find_project_root(pathOrCwd);
     const utilities = await listUtilitiesInDirectory(rootPath);
-    const utilitiesInCwd = rootPath === path ? utilities : await listUtilitiesInDirectory(path);
+    const utilitiesInCwd = rootPath === pathOrCwd ? utilities : await listUtilitiesInDirectory(pathOrCwd);
     const packageFile = (await readJSON<PackageFile>(join(rootPath, "package.json"))) as PackageFile;
 
     if (packageFile.verde === undefined) {
