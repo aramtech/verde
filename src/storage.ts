@@ -1,7 +1,8 @@
 import fs from "fs-extra";
 import path from "path";
 
-import { HOME_DIR_PATH } from "./os";
+import { CPU_COUNT, HOME_DIR_PATH } from "./os";
+import { chunkArr } from "./array";
 
 const VERDE_DIR_NAME = ".verde";
 
@@ -25,6 +26,20 @@ export const saveToFileStorage = async (name: string, buff: Buffer): Promise<voi
 export const getFileFromStorage = async (name: string): Promise<Buffer> => {
     const filepath = nameToPath(name);
     return await fs.readFile(filepath);
+};
+
+export const areFilesStored = async (...names: string[]): Promise<Record<string, boolean>> => {
+    const paths = names.map(nameToPath);
+    const chunkedPaths = chunkArr(paths, CPU_COUNT * 4);
+
+    const result: Record<string, boolean> = {};
+
+    for (const paths of chunkedPaths) {
+        const checkResults: [string, boolean][] = await Promise.all(paths.map(async p => [p, await fs.exists(p)]));
+        checkResults.forEach(([p, e]) => (result[p as string] = e));
+    }
+
+    return result;
 };
 
 export const isFileStored = async (name: string): Promise<boolean> => {
