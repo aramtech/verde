@@ -15,7 +15,7 @@ import { CPU_COUNT } from "./os";
 import { push_utility } from "./upload_git_tree";
 import { type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash } from "./utility";
 
-const configFilename = "utils.json";
+const utilityConfigFileName = "utils.json";
 
 type UtilityDescription = {
     configFile: UtilityFile;
@@ -26,13 +26,13 @@ type UtilityDescription = {
 export const listUtilitiesInDirectory = async (projectPath: string): Promise<UtilityDescription[]> => {
     const traverseResult = await collectDirsWithFile(projectPath, {
         exclude: ["node_modules", ".git", "dist"],
-        configFilename: configFilename,
+        configFilename: utilityConfigFileName,
     });
 
     const descArr: UtilityDescription[] = [];
 
     for (const tr of traverseResult) {
-        const configFile = await readJSON<UtilityFile>(join(tr.dirPath, configFilename));
+        const configFile = await readJSON<UtilityFile>(join(tr.dirPath, utilityConfigFileName));
 
         descArr.push({
             configFile,
@@ -44,10 +44,30 @@ export const listUtilitiesInDirectory = async (projectPath: string): Promise<Uti
     return descArr;
 };
 
+type VerdeConfig = {
+    deps: {};
+    dest: string;
+    org: string;
+    grouping: Array<{
+        prefix: string;
+        installationDestination: string;
+        organization: string;
+    }>;
+};
+
+type PackageFile = {
+    name: string;
+    version: string;
+    dependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+    verde: VerdeConfig;
+};
+
 export type ProjectContext = {
     utilities: UtilityDescription[];
     utilitiesInCwd: UtilityDescription[];
     path: string;
+    packageFile: PackageFile;
 };
 
 const selectUtilityByName = (ctx: ProjectContext, name: string): UtilityDescription | undefined =>
@@ -57,16 +77,41 @@ export const assembleProjectContext = async (path: string): Promise<ProjectConte
     const rootPath = await find_project_root(path);
     const utilities = await listUtilitiesInDirectory(rootPath);
     const utilitiesInCwd = rootPath === path ? utilities : await listUtilitiesInDirectory(path);
+    const packageFile = (await readJSON<PackageFile>(join(rootPath, "package.json"))) as PackageFile;
+
+    if (packageFile.verde === undefined) {
+        const verde: VerdeConfig = {
+            dest: "./server/utils",
+            deps: {},
+            grouping: [],
+            org: "aramtech",
+        };
+
+        const packageFileWithVerde = {
+            ...packageFile,
+            verde,
+        };
+
+        storeObjectInCwd<PackageFile>(join(rootPath, "package.json"), packageFileWithVerde);
+
+        return {
+            utilities,
+            utilitiesInCwd,
+            path: rootPath,
+            packageFile: packageFileWithVerde,
+        };
+    }
 
     return {
         utilities,
         utilitiesInCwd,
+        packageFile,
         path: rootPath,
     };
 };
 
 export const initNewUtility = async (context: ProjectContext, name: string, description: string) => {
-    if (await isStoredOnDisk(configFilename)) {
+    if (await isStoredOnDisk(utilityConfigFileName)) {
         console.error("directory already managed by verde!.");
         return;
     }
@@ -93,12 +138,12 @@ export const initNewUtility = async (context: ProjectContext, name: string, desc
     const sortedPaths = paths
         .slice(0)
         .sort()
-        .filter(p => basename(p) !== configFilename);
+        .filter(p => basename(p) !== utilityConfigFileName);
 
     const files = await readFiles(sortedPaths);
     const hash = hashBuffersWithSha256(files);
 
-    await storeObjectInCwd<UtilityFile>(configFilename, {
+    await storeObjectInCwd<UtilityFile>(utilityConfigFileName, {
         name: name,
         deps: {},
         private: false,
@@ -133,7 +178,7 @@ export const hideUtilityInProject = async (context: ProjectContext, name: string
     }
 
     const nextUtilityFile = markUtilityFileAsPrivate(util.configFile);
-    await storeObjectInCwd<UtilityFile>(join(util.path, configFilename), nextUtilityFile);
+    await storeObjectInCwd<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
     console.log("done!");
 };
 
@@ -146,7 +191,7 @@ export const revealUtilityInProject = async (context: ProjectContext, name: stri
     }
 
     const nextUtilityFile = markUtilityAsPublic(util.configFile);
-    await storeObjectInCwd<UtilityFile>(join(util.path, configFilename), nextUtilityFile);
+    await storeObjectInCwd<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
     console.log("done!");
 };
 
@@ -164,14 +209,14 @@ export const checkUtility = async (context: ProjectContext, nameOrDesc: string |
 
     const previousHash = util.configFile.hash || "";
 
-    const utilFilePaths = util.files.filter(f => basename(f) !== configFilename);
+    const utilFilePaths = util.files.filter(f => basename(f) !== utilityConfigFileName);
     const files = await readFiles(utilFilePaths);
     const currentHash = hashBuffersWithSha256(files);
 
     if (previousHash !== currentHash) {
         console.log(`${util.configFile.name} hash mismatch, updating on disk config file...`);
         await storeObjectInCwd<UtilityFile>(
-            join(util.path, configFilename),
+            join(util.path, utilityConfigFileName),
             updateUtilityHash(util.configFile, currentHash),
         );
         return {
