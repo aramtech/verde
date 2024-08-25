@@ -35,6 +35,7 @@ describe("list", () => {
         vi.spyOn(console, "warn");
 
         await moveToTestDir();
+        await storeObjectInCwd("package.json", { name: "FOO" });
 
         const cmd = addCommands(new Command());
         await cmd.parseAsync(["node", "verde", "list"]);

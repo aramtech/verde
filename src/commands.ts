@@ -6,7 +6,7 @@ import {
     pull_all_utilities,
     pull_utility,
 } from "./github";
-import { getUtilityByName, listUtilitiesInDirectory, pushAllUtilities } from "./project";
+import { assembleProjectContext, getUtilityByName, listUtilitiesInDirectory, pushAllUtilities } from "./project";
 
 import logger from "./logger";
 import {
@@ -22,14 +22,14 @@ import { parseUtilityVersion, type Version } from "./utility";
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
-        const utils = await listUtilitiesInDirectory(".");
+        const context = await assembleProjectContext(".", {});
 
-        if (utils.length === 0) {
+        if (context.utilities.length === 0) {
             console.warn("no tool found!.");
             return;
         }
 
-        for (const config of utils) {
+        for (const config of context.utilities) {
             console.log("Tool found: ", config.configFile.name);
         }
     });
