@@ -46,7 +46,8 @@ const addInitCommand = (program: Command) =>
 
 const addRemoveUtilityCommand = (program: Command) =>
     program.command("remove <name>").action(async p => {
-        await removeUtilityFromProject(p);
+        const context = await assembleProjectContext(process.cwd());
+        await removeUtilityFromProject(context, p);
     });
 
 const addPushUtilityCommand = (program: Command) =>

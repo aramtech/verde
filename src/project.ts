@@ -105,14 +105,8 @@ export const initNewUtility = async (context: ProjectContext, name: string, desc
     });
 };
 
-export const removeUtilityFromProject = async (name: string, projectPath?: string) => {
-    if (!projectPath) {
-        projectPath = await find_project_root();
-    }
-
-    const utils = await listUtilitiesInDirectory(projectPath);
-
-    for (const util of utils) {
+export const removeUtilityFromProject = async (context: ProjectContext, name: string) => {
+    for (const util of context.utilities) {
         if (util.configFile.name === name) {
             console.log("found utility file, deleting...");
             await removeDir(util.path);
