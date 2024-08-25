@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
-import { readJSON, storeObjectInCwd } from "../src/fs";
+import { readJSON, storeJSON } from "../src/fs";
 import { type UtilityFile } from "../src/utility";
 import type { ProjectContext } from "../src/project";
 
@@ -34,7 +34,7 @@ describe("config", () => {
 
         await moveToTestDir();
 
-        await storeObjectInCwd("package.json", { name: "FOO" });
+        await storeJSON("package.json", { name: "FOO" });
         const cmd = addCommands(new Command());
         await cmd.parseAsync(["node", "verde", "config"]);
 
@@ -51,7 +51,7 @@ describe("config", () => {
 
         await moveToTestDir();
 
-        await storeObjectInCwd("package.json", {
+        await storeJSON("package.json", {
             name: "FOO",
             verde: { org: "salem-is-the-best", dest: "he-does-not-write-tests-though ; - ;" },
         });

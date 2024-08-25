@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
-import { storeObjectInCwd } from "../src/fs";
+import { storeJSON } from "../src/fs";
 
 describe("list", () => {
     let originalCwd: string = process.cwd();
@@ -35,7 +35,7 @@ describe("list", () => {
         vi.spyOn(console, "warn");
 
         await moveToTestDir();
-        await storeObjectInCwd("package.json", { name: "FOO" });
+        await storeJSON("package.json", { name: "FOO" });
 
         const cmd = addCommands(new Command());
         await cmd.parseAsync(["node", "verde", "list"]);
@@ -48,7 +48,7 @@ describe("list", () => {
 
         const testDirPath = await moveToTestDir();
 
-        await storeObjectInCwd("package.json", {
+        await storeJSON("package.json", {
             name: "foo-package",
             version: "1.0.0",
         });

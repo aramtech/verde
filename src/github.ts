@@ -5,7 +5,7 @@ import path from "path";
 import url from "url";
 import { download_utility } from "./download_utility.ts";
 import { command_on_system, run_command } from "./exec.js";
-import { collectFilePathsIn, find_project_root, readJSON, storeObjectInCwd } from "./fs.ts";
+import { collectFilePathsIn, find_project_root, readJSON, storeJSON } from "./fs.ts";
 import { loadingSpinner, default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
 import { chunkArr, getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
@@ -208,13 +208,13 @@ export const store_relative_utils_path = async (path: string) => {
     if (record) {
         if (record.relative_utils_path != path) {
             record.relative_utils_path = path;
-            await storeObjectInCwd(relative_utils_json_path, {
+            await storeJSON(relative_utils_json_path, {
                 ...relative_utils,
                 [project_root]: record,
             });
         }
     } else {
-        await storeObjectInCwd<RelativeUtilsPathsJson>(relative_utils_json_path, {
+        await storeJSON<RelativeUtilsPathsJson>(relative_utils_json_path, {
             ...relative_utils,
             [project_root]: {
                 relative_utils_path: path,

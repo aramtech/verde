@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
-import { readJSON, storeObjectInCwd } from "../src/fs";
+import { readJSON, storeJSON } from "../src/fs";
 import { type UtilityFile } from "../src/utility";
 
 describe("reveal", () => {
@@ -37,7 +37,7 @@ describe("reveal", () => {
 
         const testDirPath = await moveToTestDir();
 
-        await storeObjectInCwd("package.json", { name: "FOO" });
+        await storeJSON("package.json", { name: "FOO" });
 
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
@@ -56,7 +56,7 @@ describe("reveal", () => {
 
         const testDirPath = await moveToTestDir();
 
-        await storeObjectInCwd("package.json", { name: "FOO" });
+        await storeJSON("package.json", { name: "FOO" });
 
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(

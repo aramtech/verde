@@ -8,7 +8,7 @@ import {
     readFiles,
     readJSON,
     removeDir,
-    storeObjectInCwd,
+    storeJSON,
 } from "./fs";
 import logger from "./logger";
 import { CPU_COUNT } from "./os";
@@ -141,7 +141,7 @@ export const initNewUtility = async (context: ProjectContext, name: string, desc
     const files = await readFiles(sortedPaths);
     const hash = hashBuffersWithSha256(files);
 
-    await storeObjectInCwd<UtilityFile>(utilityConfigFileName, {
+    await storeJSON<UtilityFile>(utilityConfigFileName, {
         name: name,
         deps: {},
         private: false,
@@ -176,7 +176,7 @@ export const hideUtilityInProject = async (context: ProjectContext, name: string
     }
 
     const nextUtilityFile = markUtilityFileAsPrivate(util.configFile);
-    await storeObjectInCwd<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
+    await storeJSON<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
     console.log("done!");
 };
 
@@ -189,7 +189,7 @@ export const revealUtilityInProject = async (context: ProjectContext, name: stri
     }
 
     const nextUtilityFile = markUtilityAsPublic(util.configFile);
-    await storeObjectInCwd<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
+    await storeJSON<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
     console.log("done!");
 };
 
@@ -213,7 +213,7 @@ export const checkUtility = async (context: ProjectContext, nameOrDesc: string |
 
     if (previousHash !== currentHash) {
         console.log(`${util.configFile.name} hash mismatch, updating on disk config file...`);
-        await storeObjectInCwd<UtilityFile>(
+        await storeJSON<UtilityFile>(
             join(util.path, utilityConfigFileName),
             updateUtilityHash(util.configFile, currentHash),
         );
@@ -231,6 +231,7 @@ export const checkUtility = async (context: ProjectContext, nameOrDesc: string |
         match: currentHash === previousHash,
     };
 };
+
 export const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
     let result: T[][] = [];
     let currentChunk: T[] = [];
@@ -269,6 +270,6 @@ export const pushAllUtilities = async (context: ProjectContext) => {
 };
 
 export const addConfigToProjectPackageFile = async (context: ProjectContext) => {
-    await storeObjectInCwd<PackageFile>(join(context.path, "package.json"), context.packageFile);
+    await storeJSON<PackageFile>(join(context.path, "package.json"), context.packageFile);
     console.log("Your verde config: \n", JSON.stringify(context.packageFile.verde, undefined, 4));
 };

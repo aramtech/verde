@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
-import { storeObjectInCwd } from "../src/fs";
+import { storeJSON } from "../src/fs";
 
 describe("remove", () => {
     let originalCwd: string = process.cwd();
@@ -34,7 +34,7 @@ describe("remove", () => {
     test("remove command: no matching utility found should do nothing.", async () => {
         const testDirPath = await moveToTestDir();
 
-        await storeObjectInCwd("package.json", { name: "FOO" });
+        await storeJSON("package.json", { name: "FOO" });
 
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
@@ -58,7 +58,7 @@ describe("remove", () => {
     test("remove command: found matching utility, should remove it.", async () => {
         const testDirPath = await moveToTestDir();
 
-        await storeObjectInCwd("package.json", { name: "FOO" });
+        await storeJSON("package.json", { name: "FOO" });
 
         await fs.mkdir(path.join(testDirPath, "foo-util"));
         await fs.writeFile(
