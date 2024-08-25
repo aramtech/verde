@@ -62,12 +62,14 @@ const addPushUtilityCommand = (program: Command) =>
 
 const addHideCommand = (program: Command) =>
     program.command("hide <name>").action(async name => {
-        await hideUtilityInProject(name);
+        const context = await assembleProjectContext(process.cwd());
+        await hideUtilityInProject(context, name);
     });
 
 const addRevealCommand = (program: Command) =>
     program.command("reveal <name>").action(async name => {
-        await revealUtilityInProject(name);
+        const context = await assembleProjectContext(process.cwd());
+        await revealUtilityInProject(context, name);
     });
 
 const addCheckCommand = (program: Command) =>

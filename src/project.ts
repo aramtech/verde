@@ -50,6 +50,9 @@ export type ProjectContext = {
     path: string;
 };
 
+const selectUtilityByName = (ctx: ProjectContext, name: string): UtilityDescription | undefined =>
+    ctx.utilities.find(u => u.configFile.name === name);
+
 export const assembleProjectContext = async (path: string): Promise<ProjectContext> => {
     const rootPath = await find_project_root(path);
     const utilities = await listUtilitiesInDirectory(rootPath);
@@ -121,8 +124,8 @@ export const getUtilityByName = async (name: string): Promise<UtilityDescription
     return utils.find(u => u.configFile.name === name);
 };
 
-export const hideUtilityInProject = async (name: string) => {
-    const util = await getUtilityByName(name);
+export const hideUtilityInProject = async (context: ProjectContext, name: string) => {
+    const util = selectUtilityByName(context, name);
 
     if (!util) {
         console.error(`could not find utility with name ${name}`);
@@ -134,8 +137,8 @@ export const hideUtilityInProject = async (name: string) => {
     console.log("done!");
 };
 
-export const revealUtilityInProject = async (name: string) => {
-    const util = await getUtilityByName(name);
+export const revealUtilityInProject = async (context: ProjectContext, name: string) => {
+    const util = selectUtilityByName(context, name);
 
     if (!util) {
         console.error(`could not find utility with name ${name}`);
