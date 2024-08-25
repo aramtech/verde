@@ -74,12 +74,14 @@ const addRevealCommand = (program: Command) =>
 
 const addCheckCommand = (program: Command) =>
     program.command("check [name]").action(async (name?: string) => {
+        const context = await assembleProjectContext(process.cwd());
+
         if (name) {
-            await checkUtility(name);
+            await checkUtility(context, name);
             return;
         }
 
-        await checkAllUtilities();
+        await checkAllUtilities(context);
     });
 
 const addDeleteBranchVersion = (program: Command) =>

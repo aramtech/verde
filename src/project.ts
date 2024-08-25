@@ -150,9 +150,10 @@ export const revealUtilityInProject = async (context: ProjectContext, name: stri
     console.log("done!");
 };
 
-export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
+export const checkUtility = async (context: ProjectContext, nameOrDesc: string | UtilityDescription) => {
     logger.log(`looking for utility "${nameOrDesc}"`);
-    const util = typeof nameOrDesc === "string" ? await getUtilityByName(nameOrDesc) : nameOrDesc;
+
+    const util = typeof nameOrDesc === "string" ? selectUtilityByName(context, nameOrDesc) : nameOrDesc;
 
     if (!util) {
         logger.fatal(`could not find utility with name ${nameOrDesc}`);
@@ -184,7 +185,7 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
     return {
         currentHash,
         previousHash,
-        match: currentHash == previousHash,
+        match: currentHash === previousHash,
     };
 };
 export const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
@@ -207,12 +208,12 @@ export const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
     return result;
 };
 
-export const checkAllUtilities = async () => {
-    const utilities = await listUtilitiesInDirectory(await find_project_root());
+export const checkAllUtilities = async (context: ProjectContext) => {
+    const { utilities } = context;
     const chunked = chunkArr(utilities, CPU_COUNT * 2);
 
     for (const chunk of chunked) {
-        await Promise.all(chunk.map(c => checkUtility(c)));
+        await Promise.all(chunk.map(c => checkUtility(context, c)));
     }
 };
 
