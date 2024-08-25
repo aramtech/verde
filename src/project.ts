@@ -44,41 +44,41 @@ export const listUtilitiesInDirectory = async (projectPath: string): Promise<Uti
     return descArr;
 };
 
-export type ProjectContext<Params> = {
+export type ProjectContext = {
     utilities: UtilityDescription[];
+    utilitiesInCwd: UtilityDescription[];
     path: string;
-    params: Params;
 };
 
-export const assembleProjectContext = async <T>(path: string, params: T): Promise<ProjectContext<T>> => {
-    const utilities = await listUtilitiesInDirectory(path);
+export const assembleProjectContext = async (path: string): Promise<ProjectContext> => {
     const rootPath = await find_project_root(path);
+    const utilities = await listUtilitiesInDirectory(rootPath);
+    const utilitiesInCwd = rootPath === path ? utilities : await listUtilitiesInDirectory(path);
 
     return {
         utilities,
+        utilitiesInCwd,
         path: rootPath,
-        params,
     };
 };
 
-export const initNewUtility = async (name: string, description: string) => {
+export const initNewUtility = async (context: ProjectContext, name: string, description: string) => {
     if (await isStoredOnDisk(configFilename)) {
         console.error("directory already managed by verde!.");
         return;
     }
 
-    const utils = await listUtilitiesInDirectory(".");
-
-    if (utils.length) {
+    if (context.utilitiesInCwd.length) {
         logger.fatal(
             "this directory contains sub utilities",
             "\n",
-            utils.map(u => `${u.configFile.name}: ${u.path}`).join("\n"),
+            context.utilitiesInCwd.map(u => `${u.configFile.name}: ${u.path}`).join("\n"),
         );
         return;
     }
 
-    const nameNotAvailable = utils.some(u => u.configFile.name === name);
+    const { utilities } = context;
+    const nameNotAvailable = utilities.some(u => u.configFile.name === name);
 
     if (nameNotAvailable) {
         console.error("name taken by a different utility.");
@@ -96,12 +96,12 @@ export const initNewUtility = async (name: string, description: string) => {
     const hash = hashBuffersWithSha256(files);
 
     await storeObjectInCwd<UtilityFile>(configFilename, {
-        name,
+        name: name,
         deps: {},
         private: false,
         hash,
         version: "0.1.0",
-        description,
+        description: description,
     });
 };
 

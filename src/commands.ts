@@ -6,7 +6,8 @@ import {
     pull_all_utilities,
     pull_utility,
 } from "./github";
-import { assembleProjectContext, getUtilityByName, listUtilitiesInDirectory, pushAllUtilities } from "./project";
+
+import { assembleProjectContext, getUtilityByName, pushAllUtilities } from "./project";
 
 import logger from "./logger";
 import {
@@ -22,7 +23,7 @@ import { parseUtilityVersion, type Version } from "./utility";
 
 const addListToProgram = (program: Command) =>
     program.command("list").action(async () => {
-        const context = await assembleProjectContext(".", {});
+        const context = await assembleProjectContext(".");
 
         if (context.utilities.length === 0) {
             console.warn("no tool found!.");
@@ -39,7 +40,8 @@ const addInitCommand = (program: Command) =>
         .command("init <name>")
         .option("-d, --description <description>")
         .action(async (p, { description = "" }) => {
-            await initNewUtility(p, description.trim());
+            const context = await assembleProjectContext(process.cwd());
+            await initNewUtility(context, p, description.trim());
         });
 
 const addRemoveUtilityCommand = (program: Command) =>
