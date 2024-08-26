@@ -93,6 +93,8 @@ export const assembleProjectContext = async (pathOrCwd: string): Promise<Project
             verde,
         };
 
+        await storeJSON(join(rootPath, "package.json"), packageFileWithVerde);
+
         return {
             utilities,
             utilitiesInCwd,
