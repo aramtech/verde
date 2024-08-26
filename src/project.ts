@@ -3,7 +3,7 @@ import { hashBuffersWithSha256 } from "./crypto";
 import {
     collectDirsWithFile,
     collectFilePathsIn,
-    find_project_root,
+    findProjectRoot,
     isStoredOnDisk,
     readFiles,
     readJSON,
@@ -75,7 +75,7 @@ const selectUtilityByName = (ctx: ProjectContext, name: string): UtilityDescript
     ctx.utilities.find(u => u.configFile.name === name);
 
 export const assembleProjectContext = async (pathOrCwd: string): Promise<ProjectContext> => {
-    const rootPath = await find_project_root(pathOrCwd);
+    const rootPath = await findProjectRoot(pathOrCwd);
     const utilities = await listUtilitiesInDirectory(rootPath);
     const utilitiesInCwd = rootPath === pathOrCwd ? utilities : await listUtilitiesInDirectory(pathOrCwd);
     const packageFile = (await readJSON<PackageFile>(join(rootPath, "package.json"))) as PackageFile;
@@ -165,7 +165,7 @@ export const removeUtilityFromProject = async (context: ProjectContext, name: st
 };
 
 export const getUtilityByName = async (name: string): Promise<UtilityDescription | undefined> => {
-    const projectRoot = await find_project_root();
+    const projectRoot = await findProjectRoot();
     const utils = await listUtilitiesInDirectory(projectRoot);
     return utils.find(u => u.configFile.name === name);
 };

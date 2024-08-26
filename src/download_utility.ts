@@ -1,5 +1,5 @@
 import { run_command } from "./exec";
-import { find_project_root, is_valid_relative_path } from "./fs";
+import { findProjectRoot, is_valid_relative_path } from "./fs";
 import { get_org_name_and_token, get_relative_utils_paths_json, store_relative_utils_path } from "./github";
 import logger from "./logger";
 import { read_answer_to, read_choice } from "./prompt";
@@ -34,7 +34,7 @@ export async function downloadRepoAsZip(owner: string, repo: string, branch: str
 
     // Save the ZIP file
     response.data.pipe(fs.createWriteStream(zipPath));
-    const project_root = await find_project_root();
+    const project_root = await findProjectRoot();
     return new Promise<void>((resolve, reject) => {
         response.data.on("end", async () => {
             // Unzip the file
@@ -60,7 +60,7 @@ const get_utils_dir = async () => {
     }
 
     const tokens_store = await get_relative_utils_paths_json();
-    const project_root = await find_project_root();
+    const project_root = await findProjectRoot();
 
     const record = tokens_store[project_root];
 
@@ -97,7 +97,7 @@ async function ask_for_utility_relative_path() {
             try_count += 1;
             continue;
         }
-        if (!fs.existsSync(path.join(await find_project_root(), answer))) {
+        if (!fs.existsSync(path.join(await findProjectRoot(), answer))) {
             logger.error(
                 'invalid utilities path it must be simple directory path that exists in your project for example "server/utils"',
             );
@@ -113,7 +113,7 @@ export const download_utility = async (utility_name: string, version: string) =>
         const record = await get_org_name_and_token();
         const utils_dir = await get_utils_dir();
         console.log("utils_dir", utils_dir);
-        const utility_full_path = path.join(await find_project_root(), utils_dir, utility_name);
+        const utility_full_path = path.join(await findProjectRoot(), utils_dir, utility_name);
         if (fs.existsSync(utility_full_path)) {
             fs.rmSync(utility_full_path, {
                 recursive: true,

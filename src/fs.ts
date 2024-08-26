@@ -86,7 +86,7 @@ export async function is_valid_relative_path(path: string) {
 
 export const removeDir = async (p: string) => fs.rmdirSync(p, { recursive: true });
 
-export async function find_project_root(currentDir = path.resolve(".")) {
+export async function findProjectRoot(currentDir = path.resolve(".")) {
     const packagePath = path.join(currentDir, "package.json");
 
     if (await fs.existsSync(packagePath)) {
@@ -99,5 +99,5 @@ export async function find_project_root(currentDir = path.resolve(".")) {
         logger.fatal("No package.json file found in any parent directory.");
     }
 
-    return find_project_root(parentDir);
+    return findProjectRoot(parentDir);
 }

@@ -5,7 +5,7 @@ import path from "path";
 import url from "url";
 import { download_utility } from "./download_utility.ts";
 import { command_on_system, run_command } from "./exec.js";
-import { collectFilePathsIn, find_project_root, readJSON, storeJSON } from "./fs.ts";
+import { collectFilePathsIn, findProjectRoot, readJSON, storeJSON } from "./fs.ts";
 import { loadingSpinner, default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
 import { getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
@@ -201,7 +201,7 @@ export type RelativeUtilsPathsJson = {
 };
 export const get_relative_utils_paths_json = () => readJSON<RelativeUtilsPathsJson>(relative_utils_json_path);
 export const store_relative_utils_path = async (path: string) => {
-    const project_root = await find_project_root();
+    const project_root = await findProjectRoot();
     const relative_utils = await get_relative_utils_paths_json();
 
     const record = relative_utils[project_root];
@@ -226,7 +226,7 @@ export const store_relative_utils_path = async (path: string) => {
 
 export const store_org_and_token = async (token: string, org_name: string) => {
     const content: TokensStore = JSON.parse(fs.readFileSync(tokens_json_path, { encoding: "utf-8" }));
-    const project_root = await find_project_root();
+    const project_root = await findProjectRoot();
     const found_record = content[project_root];
     if (found_record) {
         found_record.token = token;
@@ -250,7 +250,7 @@ export const store_org_and_token = async (token: string, org_name: string) => {
 export const get_org_and_token_from_store = async () => {
     if (fs.existsSync(tokens_json_path)) {
         const store: TokensStore = JSON.parse(fs.readFileSync(tokens_json_path, "utf-8"));
-        const record = store[await find_project_root()] as
+        const record = store[await findProjectRoot()] as
             | {
                   token: string;
                   org_name: string;
@@ -905,7 +905,7 @@ export const pull_utility = async (utility_name: string, version?: string) => {
 };
 
 export const pull_all_utilities = async () => {
-    const utilities = await listUtilitiesInDirectory(await find_project_root());
+    const utilities = await listUtilitiesInDirectory(await findProjectRoot());
     const chunked = chunkArr(utilities, CPU_COUNT * 2);
 
     for (const chunk of chunked) {

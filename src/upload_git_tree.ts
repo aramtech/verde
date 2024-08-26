@@ -2,7 +2,7 @@ import { Octokit } from "@octokit/rest";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import { find_project_root } from "./fs";
+import { findProjectRoot } from "./fs";
 import {
     compare_version,
     deleteBranchOnFailure,
