@@ -82,9 +82,9 @@ export const retrieveEncryptedFileFromStorage = async (name: string, password: s
 
     try {
         const encryptedContents = await fs.readFile(path);
-        return decryptBufferWithPassword(encryptedContents, password);
+        return Buffer.from(decryptBufferWithPassword(encryptedContents, password));
     } catch (err) {
-        logger.error("failed to decrypt file: ", name, "with error", err);
+        logger.error("failed to decrypt file: ", name, ":", err);
         return null;
     }
 };
@@ -95,3 +95,5 @@ export const isStoredAsEncrypted = async (name: string) => {
 
     return await fs.exists(path);
 };
+
+// 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

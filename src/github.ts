@@ -323,7 +323,7 @@ export const get_org_name_and_token = async () => {
                     org_name,
                 });
 
-                await encryptAndSaveFileToStorage("token_cache.json", Buffer.from(contents), password);
+                await encryptAndSaveFileToStorage("token_cache.json", Buffer.from(contents, "utf-8"), password);
             },
         );
     }
