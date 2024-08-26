@@ -9,7 +9,7 @@ import { collectFilePathsIn, findProjectRoot, readJSON, storeJSON } from "./fs.t
 import { loadingSpinner, default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
 import { getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
-import { read_answer_to, read_choice } from "./prompt.js";
+import { readAnswer, readPrompt } from "./prompt.js";
 import { parseUtilityVersion, type Version } from "./utility.ts";
 import { chunkArr } from "./array.ts";
 
@@ -139,7 +139,7 @@ export const get_token_for_repo = async (repo_name: string) => {
             Logger.fatal("Maximum try count exceeded");
         }
 
-        github_personal_access_token = await read_answer_to(
+        github_personal_access_token = await readAnswer(
             "Please provide your classic personal github access token (you can create one at https://github.com/settings/tokens)\n\n Token:",
         );
 
@@ -275,10 +275,10 @@ export const get_org_name_and_token = async () => {
         return stored_record;
     }
 
-    const org_name = await read_answer_to("Please input your organization name:");
+    const org_name = await readAnswer("Please input your organization name:");
     const token = await get_token_for_org(org_name);
 
-    const choice: "yes" | "no" = (await read_choice("would you like to store token and organization name", [
+    const choice: "yes" | "no" = (await readPrompt("would you like to store token and organization name", [
         "yes",
         "no",
     ])) as "yes" | "no";
@@ -308,7 +308,7 @@ export const get_token_for_org = async (org_name: string) => {
             Logger.fatal("Maximum try count exceeded");
         }
 
-        github_personal_access_token = await read_answer_to(
+        github_personal_access_token = await readAnswer(
             "Please provide your classic personal github access token (you can create one at https://github.com/settings/tokens)\n\n Token:",
         );
 

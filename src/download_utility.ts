@@ -2,7 +2,7 @@ import { run_command } from "./exec";
 import { findProjectRoot, is_valid_relative_path } from "./fs";
 import { get_org_name_and_token, get_relative_utils_paths_json, store_relative_utils_path } from "./github";
 import logger from "./logger";
-import { read_answer_to, read_choice } from "./prompt";
+import { readAnswer, readPrompt } from "./prompt";
 
 const axios = (await import("axios")).default;
 const fs = (await import("fs-extra")).default;
@@ -70,7 +70,7 @@ const get_utils_dir = async () => {
 
     const utility_relative_path = await ask_for_utility_relative_path();
 
-    const choice: "yes" | "no" = (await read_choice("would you like to store utils relative path", ["yes", "no"])) as
+    const choice: "yes" | "no" = (await readPrompt("would you like to store utils relative path", ["yes", "no"])) as
         | "yes"
         | "no";
 
@@ -88,7 +88,7 @@ async function ask_for_utility_relative_path() {
             logger.fatal("Failed to input valid utility relative path");
             process.exit(1);
         }
-        const answer = await read_answer_to("where do you store utils in current project");
+        const answer = await readAnswer("where do you store utils in current project");
         const valid = await is_valid_relative_path(answer);
         if (!valid) {
             logger.error(
