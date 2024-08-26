@@ -3,6 +3,8 @@ import path from "path";
 
 import { CPU_COUNT, HOME_DIR_PATH } from "./os";
 import { chunkArr } from "./array";
+import { decryptBufferWithPassword, encryptBufferWithPassword } from "./crypto";
+import logger from "./logger";
 
 const VERDE_DIR_NAME = ".verde";
 
@@ -57,5 +59,32 @@ export const removeFilesFromStorage = async (...names: string[]): Promise<void> 
 
     for (const paths of chunkedPaths) {
         await Promise.all(paths.map(async p => await fs.remove(p)));
+    }
+};
+
+export const encryptAndSaveFileToStorage = async (name: string, contents: Buffer, password: string) => {
+    const encrypted = encryptBufferWithPassword(contents, password);
+    const prefixedName = `encrypted-${name}`;
+    const path = nameToPath(prefixedName);
+
+    await fs.writeFile(path, encrypted);
+};
+
+export const retrieveEncryptedFileFromStorage = async (name: string, password: string) => {
+    const prefixedName = `encrypted-${name}`;
+    const path = nameToPath(prefixedName);
+
+    const fileDoesNotExist = !(await fs.exists(path));
+
+    if (fileDoesNotExist) {
+        return null;
+    }
+
+    try {
+        const encryptedContents = await fs.readFile(path);
+        return decryptBufferWithPassword(encryptedContents, password);
+    } catch (err) {
+        logger.error("failed to decrypt file: ", name, "with error", err);
+        return null;
     }
 };

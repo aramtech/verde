@@ -86,7 +86,7 @@ export async function is_valid_relative_path(path: string) {
 
 export const removeDir = async (p: string) => fs.rmdirSync(p, { recursive: true });
 
-export async function findProjectRoot(currentDir = path.resolve(".")) {
+export const findProjectRoot = async (currentDir = path.resolve(".")): Promise<string> => {
     const packagePath = path.join(currentDir, "package.json");
 
     if (await fs.existsSync(packagePath)) {
@@ -100,4 +100,4 @@ export async function findProjectRoot(currentDir = path.resolve(".")) {
     }
 
     return findProjectRoot(parentDir);
-}
+};
