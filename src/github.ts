@@ -1,3 +1,5 @@
+// TODO: refactor this code, improve & shorten it as much as possible
+
 import { Octokit } from "@octokit/rest";
 import axios, { type AxiosRequestConfig } from "axios";
 import fs from "fs";
@@ -9,9 +11,10 @@ import { collectFilePathsIn, findProjectRoot, readJSON, storeJSON } from "./fs.t
 import { loadingSpinner, default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
 import { getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
-import { readAnswer, readPrompt } from "./prompt.js";
+import { readAnswer, readPrompt, requestPermsToRun } from "./prompt.js";
 import { parseUtilityVersion, type Version } from "./utility.ts";
 import { chunkArr } from "./array.ts";
+import { encryptAndSaveFileToStorage, isStoredAsEncrypted, retrieveEncryptedFileFromStorage } from "./storage.ts";
 
 export const org_name_to_api_link = (repo_name: string) => `https://api.github.com/orgs/${repo_name}`;
 export const repo_name_to_api_link = (repo_name: string) => `https://api.github.com/repos/${repo_name}`;
@@ -270,9 +273,29 @@ export const get_org_name_and_token = async () => {
         return cached_record;
     }
     const stored_record = await get_org_and_token_from_store();
+
     if (stored_record) {
         cached_record = stored_record;
         return stored_record;
+    }
+
+    const globalEncryptedTokenStored = await isStoredAsEncrypted("token_cache.json");
+    const useGlobalTokenAnswer = globalEncryptedTokenStored
+        ? await readPrompt("There is a global encrypted token stored, do you wish to use it?", ["yes", "no"])
+        : null;
+
+    if (globalEncryptedTokenStored && useGlobalTokenAnswer === "yes") {
+        const password = await readAnswer("Enter token password: ");
+        const fileContents = await retrieveEncryptedFileFromStorage("token_cache.json", password);
+
+        if (!fileContents) {
+            logger.fatal("invalid password!");
+            process.exit(1);
+        }
+
+        const record = JSON.parse(fileContents.toString("utf-8"));
+        cached_record = record as any;
+        return record;
     }
 
     const org_name = await readAnswer("Please input your organization name:");
@@ -285,7 +308,26 @@ export const get_org_name_and_token = async () => {
 
     if (choice == "yes") {
         store_org_and_token(token, org_name);
+
+        await requestPermsToRun(
+            "Do you want to store an encrypted version of this token to use globally?",
+            async () => {
+                const password = await readAnswer("Please enter a password to encrypt this token with: ");
+
+                if (!password) {
+                    logger.fatal("password cannot be empty");
+                }
+
+                const contents = JSON.stringify({
+                    token,
+                    org_name,
+                });
+
+                await encryptAndSaveFileToStorage("token_cache.json", Buffer.from(contents), password);
+            },
+        );
     }
+
     const record: {
         token: string;
         org_name: string;

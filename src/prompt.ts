@@ -21,3 +21,11 @@ export const readPrompt = async (question: string, choices: string[]) => {
 
     return input;
 };
+
+export const requestPermsToRun = async (msg: string, cb: () => Promise<void> | void) => {
+    const answer = await readPrompt(msg, ["yes", "no"]);
+
+    if (answer === "yes") {
+        await cb();
+    }
+};

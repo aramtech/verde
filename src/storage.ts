@@ -88,3 +88,10 @@ export const retrieveEncryptedFileFromStorage = async (name: string, password: s
         return null;
     }
 };
+
+export const isStoredAsEncrypted = async (name: string) => {
+    const prefixedName = `encrypted-${name}`;
+    const path = nameToPath(prefixedName);
+
+    return await fs.exists(path);
+};
