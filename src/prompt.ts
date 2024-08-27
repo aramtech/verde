@@ -1,8 +1,10 @@
 import enq from "enquirer";
 
-export const readAnswerTo = async (question: string) => {
+export const readAnswerTo = async (question: string, opts?: { type: "input" | "password" }) => {
+    const type = opts?.type || "input";
+
     const { input }: { input: string } = await enq.prompt({
-        type: "input",
+        type,
         name: "input",
         message: question,
         required: true,

@@ -250,42 +250,26 @@ export const store_org_and_token = async (token: string, org_name: string) => {
         fs.writeFileSync(tokens_json_path, JSON.stringify(updated_store, null, 4));
     }
 };
-export const get_org_and_token_from_store = async () => {
-    if (fs.existsSync(tokens_json_path)) {
-        const store: TokensStore = JSON.parse(fs.readFileSync(tokens_json_path, "utf-8"));
-        const record = store[await findProjectRoot()] as
-            | {
-                  token: string;
-                  org_name: string;
-              }
-            | undefined;
-        return record || null;
-    }
-    return null;
-};
 
-let cached_record: {
+type StoredAuthData = {
     token: string;
     org_name: string;
-} | null = null;
+};
+
+let cached_record: StoredAuthData | null = null;
+
 export const get_org_name_and_token = async () => {
     if (cached_record) {
         return cached_record;
     }
-    const stored_record = await get_org_and_token_from_store();
 
-    if (stored_record) {
-        cached_record = stored_record;
-        return stored_record;
-    }
-
-    const globalEncryptedTokenStored = await isStoredAsEncrypted("token_cache.json");
-    const useGlobalTokenAnswer = globalEncryptedTokenStored
+    const tokenStored = await isStoredAsEncrypted("token_cache.json");
+    const useGlobalTokenAnswer = tokenStored
         ? await readPrompt("There is a global encrypted token stored, do you wish to use it?", ["yes", "no"])
         : null;
 
-    if (globalEncryptedTokenStored && useGlobalTokenAnswer === "yes") {
-        const password = await readAnswerTo("Enter token password: ");
+    if (tokenStored && useGlobalTokenAnswer === "yes") {
+        const password = await readAnswerTo("Enter token password: ", { type: "password" });
         const fileContents = await retrieveEncryptedFileFromStorage("token_cache.json", password);
 
         if (!fileContents) {
@@ -306,35 +290,28 @@ export const get_org_name_and_token = async () => {
         "no",
     ])) as "yes" | "no";
 
-    if (choice == "yes") {
-        store_org_and_token(token, org_name);
+    if (choice === "yes") {
+        const password = await readAnswerTo("Please enter a password to encrypt this token with: ", {
+            type: "password",
+        });
 
-        await requestPermsToRun(
-            "Do you want to store an encrypted version of this token to use globally?",
-            async () => {
-                const password = await readAnswerTo("Please enter a password to encrypt this token with: ");
+        if (!password) {
+            logger.fatal("password cannot be empty");
+        }
 
-                if (!password) {
-                    logger.fatal("password cannot be empty");
-                }
+        const contents = JSON.stringify({
+            token,
+            org_name,
+        });
 
-                const contents = JSON.stringify({
-                    token,
-                    org_name,
-                });
-
-                await encryptAndSaveFileToStorage("token_cache.json", Buffer.from(contents, "utf-8"), password);
-            },
-        );
+        await encryptAndSaveFileToStorage("token_cache.json", Buffer.from(contents, "utf-8"), password);
     }
 
-    const record: {
-        token: string;
-        org_name: string;
-    } = {
+    const record: StoredAuthData = {
         token,
         org_name,
     };
+
     cached_record = record;
     return record;
 };
