@@ -2,9 +2,7 @@ import { Octokit } from "@octokit/rest";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import { findProjectRoot } from "./fs";
 import {
-    compare_version,
     deleteBranchOnFailure,
     get_file_from_repo,
     get_org_name_and_token,
@@ -14,7 +12,15 @@ import {
 import logger from "./logger";
 import { checkUtility, listUtilitiesInDirectory, type ProjectContext } from "./project";
 import { upload_dir_octo } from "./push_directory";
-import { isUtilityNameValid, parseUtilityVersion } from "./utility";
+import { compareVersions, isUtilityNameValid, parseUtilityVersion, type Version } from "./utility";
+
+const parseVersionOrExit = (v: string): Version => {
+    const parsed = parseUtilityVersion(v);
+    if (!parsed) {
+        logger.fatal(`${v} is not a valid version.`);
+    }
+    return parsed as Version;
+};
 
 // Helper to read directory contents recursively
 export async function readDirectoryRecursive(dirPath: string) {
@@ -368,9 +374,11 @@ export const push_utility = async (context: ProjectContext, utility_name: string
         }
     };
     if (last_version) {
-        if (compare_version(last_version.version, "<", util.configFile.version)) {
+        const utilVersion = parseVersionOrExit(util.configFile.version);
+
+        if (compareVersions(last_version, "<", utilVersion)) {
             return await push();
-        } else if (compare_version(last_version.version, ">", util.configFile.version)) {
+        } else if (compareVersions(last_version, ">", utilVersion)) {
             logger.log(
                 `utility ${utility_name} remote version (${last_version.version}) is greater than the local version ${util.configFile.version}`,
             );
