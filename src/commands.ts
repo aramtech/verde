@@ -128,19 +128,18 @@ const addPullCommand = (program: Command) =>
                     version?: string;
                 },
             ) => {
+                const context = await assembleProjectContext(process.cwd());
                 const { version } = options;
 
                 if (version && !parseUtilityVersion(version)) {
                     logger.fatal(`${version} is not a valid version`);
                     return;
-                }
-
-                if (name) {
+                } else if (name) {
                     await pull_utility(name, version);
                     return;
                 }
 
-                await pull_all_utilities();
+                await pull_all_utilities(context);
             },
         );
 

@@ -10,7 +10,7 @@ import { command_on_system, run_command } from "./exec.js";
 import { collectFilePathsIn, findProjectRoot, readJSON, storeJSON } from "./fs.ts";
 import { loadingSpinner, default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
-import { getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
+import { getUtilityByName, listUtilitiesInDirectory, type ProjectContext } from "./project.ts";
 import { readAnswerTo, readPrompt, requestPermsToRun } from "./prompt.js";
 import { compareVersions, parseUtilityVersion, type Version } from "./utility.ts";
 import { chunkArr } from "./array.ts";
@@ -19,7 +19,7 @@ import { encryptAndSaveFileToStorage, isStoredAsEncrypted, retrieveEncryptedFile
 export const org_name_to_api_link = (repo_name: string) => `https://api.github.com/orgs/${repo_name}`;
 export const repo_name_to_api_link = (repo_name: string) => `https://api.github.com/repos/${repo_name}`;
 
-const assertVersionIsValid = (v: string): Version => {
+const parseVersionOrExit = (v: string): Version => {
     const parsed = parseUtilityVersion(v);
     if (!parsed) {
         logger.fatal(`${v} is not a valid version.`);
@@ -879,7 +879,7 @@ export const pull_utility = async (utility_name: string, version?: string) => {
         return;
     }
 
-    const utilVersion = assertVersionIsValid(util.configFile.version);
+    const utilVersion = parseVersionOrExit(util.configFile.version);
 
     if (version) {
         console.log("requesting specific version", version);
@@ -901,8 +901,7 @@ export const pull_utility = async (utility_name: string, version?: string) => {
     }
 };
 
-export const pull_all_utilities = async () => {
-    const utilities = await listUtilitiesInDirectory(await findProjectRoot());
+export const pull_all_utilities = async ({ utilities }: ProjectContext) => {
     const chunked = chunkArr(utilities, CPU_COUNT * 2);
 
     for (const chunk of chunked) {
