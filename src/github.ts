@@ -227,30 +227,6 @@ export const store_relative_utils_path = async (path: string) => {
     }
 };
 
-export const store_org_and_token = async (token: string, org_name: string) => {
-    const content: TokensStore = JSON.parse(fs.readFileSync(tokens_json_path, { encoding: "utf-8" }));
-    const project_root = await findProjectRoot();
-    const found_record = content[project_root];
-    if (found_record) {
-        found_record.token = token;
-        found_record.org_name = org_name;
-        const updated_store: TokensStore = {
-            ...content,
-            [project_root]: found_record,
-        };
-        fs.writeFileSync(tokens_json_path, JSON.stringify(updated_store, null, 4));
-    } else {
-        const updated_store: TokensStore = {
-            ...content,
-            [project_root]: {
-                org_name: org_name,
-                token,
-            },
-        };
-        fs.writeFileSync(tokens_json_path, JSON.stringify(updated_store, null, 4));
-    }
-};
-
 type StoredAuthData = {
     token: string;
     org_name: string;

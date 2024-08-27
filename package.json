@@ -43,5 +43,11 @@
         "resetModules": true,
         "verbose": true,
         "resetMocks": true
+    },
+    "verde": {
+        "dest": "./server/utils",
+        "deps": {},
+        "grouping": [],
+        "org": "aramtech"
     }
 }
