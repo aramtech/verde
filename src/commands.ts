@@ -135,7 +135,7 @@ const addPullCommand = (program: Command) =>
                     logger.fatal(`${version} is not a valid version`);
                     return;
                 } else if (name) {
-                    await pull_utility(name, version);
+                    await pull_utility(context, name, version);
                     return;
                 }
 

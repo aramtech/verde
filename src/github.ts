@@ -10,7 +10,7 @@ import { command_on_system, run_command } from "./exec.js";
 import { collectFilePathsIn, findProjectRoot, readJSON, storeJSON } from "./fs.ts";
 import { loadingSpinner, default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
-import { getUtilityByName, listUtilitiesInDirectory, type ProjectContext } from "./project.ts";
+import { getUtilityByName, listUtilitiesInDirectory, selectUtilityByName, type ProjectContext } from "./project.ts";
 import { readAnswerTo, readPrompt, requestPermsToRun } from "./prompt.js";
 import { compareVersions, parseUtilityVersion, type Version } from "./utility.ts";
 import { chunkArr } from "./array.ts";
@@ -813,7 +813,7 @@ export type SingleGithubFile = {
     };
 };
 
-export const pull_utility = async (utility_name: string, version?: string) => {
+export const pull_utility = async (context: ProjectContext, utility_name: string, version?: string) => {
     /**
      *  - check if the utility has remote version
      *    - if not prompt that this utility does not exist remotely
@@ -864,7 +864,7 @@ export const pull_utility = async (utility_name: string, version?: string) => {
         };
     }
 
-    const util = await getUtilityByName(utility_name);
+    const util = selectUtilityByName(context, utility_name);
 
     const pull = async () => {
         download_utility(utility_name, selected_version.version);
@@ -901,10 +901,11 @@ export const pull_utility = async (utility_name: string, version?: string) => {
     }
 };
 
-export const pull_all_utilities = async ({ utilities }: ProjectContext) => {
+export const pull_all_utilities = async (ctx: ProjectContext) => {
+    const { utilities } = ctx;
     const chunked = chunkArr(utilities, CPU_COUNT * 2);
 
     for (const chunk of chunked) {
-        await Promise.all(chunk.map(c => pull_utility(c.configFile.name)));
+        await Promise.all(chunk.map(c => pull_utility(ctx, c.configFile.name)));
     }
 };

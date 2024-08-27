@@ -71,7 +71,7 @@ export type ProjectContext = {
     packageFile: PackageFile;
 };
 
-const selectUtilityByName = (ctx: ProjectContext, name: string): UtilityDescription | undefined =>
+export const selectUtilityByName = (ctx: ProjectContext, name: string): UtilityDescription | undefined =>
     ctx.utilities.find(u => u.configFile.name === name);
 
 export const assembleProjectContext = async (pathOrCwd: string): Promise<ProjectContext> => {
