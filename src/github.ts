@@ -11,7 +11,7 @@ import { collectFilePathsIn, findProjectRoot, readJSON, storeJSON } from "./fs.t
 import { loadingSpinner, default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
 import { getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
-import { readAnswer, readPrompt, requestPermsToRun } from "./prompt.js";
+import { readAnswerTo, readPrompt, requestPermsToRun } from "./prompt.js";
 import { parseUtilityVersion, type Version } from "./utility.ts";
 import { chunkArr } from "./array.ts";
 import { encryptAndSaveFileToStorage, isStoredAsEncrypted, retrieveEncryptedFileFromStorage } from "./storage.ts";
@@ -142,7 +142,7 @@ export const get_token_for_repo = async (repo_name: string) => {
             Logger.fatal("Maximum try count exceeded");
         }
 
-        github_personal_access_token = await readAnswer(
+        github_personal_access_token = await readAnswerTo(
             "Please provide your classic personal github access token (you can create one at https://github.com/settings/tokens)\n\n Token:",
         );
 
@@ -285,7 +285,7 @@ export const get_org_name_and_token = async () => {
         : null;
 
     if (globalEncryptedTokenStored && useGlobalTokenAnswer === "yes") {
-        const password = await readAnswer("Enter token password: ");
+        const password = await readAnswerTo("Enter token password: ");
         const fileContents = await retrieveEncryptedFileFromStorage("token_cache.json", password);
 
         if (!fileContents) {
@@ -298,7 +298,7 @@ export const get_org_name_and_token = async () => {
         return record;
     }
 
-    const org_name = await readAnswer("Please input your organization name:");
+    const org_name = await readAnswerTo("Please input your organization name:");
     const token = await get_token_for_org(org_name);
 
     const choice: "yes" | "no" = (await readPrompt("would you like to store token and organization name", [
@@ -312,7 +312,7 @@ export const get_org_name_and_token = async () => {
         await requestPermsToRun(
             "Do you want to store an encrypted version of this token to use globally?",
             async () => {
-                const password = await readAnswer("Please enter a password to encrypt this token with: ");
+                const password = await readAnswerTo("Please enter a password to encrypt this token with: ");
 
                 if (!password) {
                     logger.fatal("password cannot be empty");
@@ -350,7 +350,7 @@ export const get_token_for_org = async (org_name: string) => {
             Logger.fatal("Maximum try count exceeded");
         }
 
-        github_personal_access_token = await readAnswer(
+        github_personal_access_token = await readAnswerTo(
             "Please provide your classic personal github access token (you can create one at https://github.com/settings/tokens)\n\n Token:",
         );
 

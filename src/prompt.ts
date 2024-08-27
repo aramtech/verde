@@ -1,6 +1,6 @@
 import enq from "enquirer";
 
-export const readAnswer = async (question: string) => {
+export const readAnswerTo = async (question: string) => {
     const { input }: { input: string } = await enq.prompt({
         type: "input",
         name: "input",
