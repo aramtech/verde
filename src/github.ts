@@ -12,7 +12,7 @@ import { loadingSpinner, default as Logger, default as logger } from "./logger.j
 import { CPU_COUNT } from "./os.ts";
 import { getUtilityByName, listUtilitiesInDirectory } from "./project.ts";
 import { readAnswerTo, readPrompt, requestPermsToRun } from "./prompt.js";
-import { parseUtilityVersion, type Version } from "./utility.ts";
+import { compareVersions, parseUtilityVersion, type Version } from "./utility.ts";
 import { chunkArr } from "./array.ts";
 import { encryptAndSaveFileToStorage, isStoredAsEncrypted, retrieveEncryptedFileFromStorage } from "./storage.ts";
 
@@ -496,9 +496,9 @@ export async function get_utility_versions(owner: string, utility: string) {
                 const left = a as Version;
                 const right = b as Version;
 
-                if (compare_version(left.version, ">", right.version)) {
+                if (compareVersions(left, ">", right)) {
                     return 1;
-                } else if (compare_version(left.version, "<", right.version)) {
+                } else if (compareVersions(left, "<", right)) {
                     return -1;
                 }
 
@@ -813,55 +813,6 @@ export type SingleGithubFile = {
     };
 };
 
-export const compare_version = (version_a: string, operation: "==" | "<" | ">" | "<=" | ">=", version_b: string) => {
-    const a = assertVersionIsValid(version_a);
-    const b = assertVersionIsValid(version_b);
-
-    if (operation == "<") {
-        if (a.major != b.major) {
-            return a.major < b.major;
-        }
-        if (a.minor != b.minor) {
-            return a.minor < b.minor;
-        }
-        return a.patch < b.patch;
-    }
-
-    if (operation == "<=") {
-        if (a.major != b.major) {
-            return a.major <= b.major;
-        }
-        if (a.minor != b.minor) {
-            return a.minor <= b.minor;
-        }
-        return a.patch <= b.patch;
-    }
-
-    if (operation == "==") {
-        return a.version == b.version;
-    }
-
-    if (operation == ">=") {
-        if (a.major != b.major) {
-            return a.major >= b.major;
-        }
-        if (a.minor != b.minor) {
-            return a.minor >= b.minor;
-        }
-        return a.patch >= b.patch;
-    }
-
-    if (operation == ">") {
-        if (a.major != b.major) {
-            return a.major > b.major;
-        }
-        if (a.minor != b.minor) {
-            return a.minor > b.minor;
-        }
-        return a.patch > b.patch;
-    }
-};
-
 export const pull_utility = async (utility_name: string, version?: string) => {
     /**
      *  - check if the utility has remote version
@@ -925,23 +876,27 @@ export const pull_utility = async (utility_name: string, version?: string) => {
 
     if (!util) {
         await pull();
-    } else {
-        if (version) {
-            console.log("requesting specific version", version);
-            if (!compare_version(selected_version.version, "==", util.configFile.version)) {
-                return await pull();
-            } else {
-                return up_to_date();
-            }
+        return;
+    }
+
+    const utilVersion = assertVersionIsValid(util.configFile.version);
+
+    if (version) {
+        console.log("requesting specific version", version);
+
+        if (!compareVersions(selected_version, "==", utilVersion)) {
+            return await pull();
         } else {
-            if (compare_version(selected_version.version, ">", util.configFile.version)) {
-                await pull();
-            } else if (compare_version(selected_version.version, "<", util.configFile.version)) {
-                logger.warning("you local version is greater than remote latest, please push updates");
-                return;
-            } else {
-                return up_to_date();
-            }
+            return up_to_date();
+        }
+    } else {
+        if (compareVersions(selected_version, ">", utilVersion)) {
+            await pull();
+        } else if (compareVersions(selected_version, "<", utilVersion)) {
+            logger.warning("you local version is greater than remote latest, please push updates");
+            return;
+        } else {
+            return up_to_date();
         }
     }
 };

@@ -42,6 +42,50 @@ export const parseUtilityVersion = (raw: string): Version | null => {
     };
 };
 
+export const compareVersions = (v1: Version, op: "==" | ">" | "<" | ">=" | "<=", v2: Version) => {
+    if (op == "<") {
+        if (v1.major != v2.major) {
+            return v1.major < v2.major;
+        }
+        if (v1.minor != v2.minor) {
+            return v1.minor < v2.minor;
+        }
+        return v1.patch < v2.patch;
+    }
+
+    if (op == "<=") {
+        if (v1.major != v2.major) {
+            return v1.major <= v2.major;
+        }
+        if (v1.minor != v2.minor) {
+            return v1.minor <= v2.minor;
+        }
+        return v1.patch <= v2.patch;
+    }
+
+    if (op == "==") {
+        return v1.version == v2.version;
+    }
+
+    if (op == ">=") {
+        if (v1.major != v2.major) {
+            return v1.major >= v2.major;
+        }
+        if (v1.minor != v2.minor) {
+            return v1.minor >= v2.minor;
+        }
+        return v1.patch >= v2.patch;
+    }
+
+    if (v1.major != v2.major) {
+        return v1.major > v2.major;
+    } else if (v1.minor != v2.minor) {
+        return v1.minor > v2.minor;
+    }
+
+    return v1.patch > v2.patch;
+};
+
 export const isUtilityNameValid = (name: string) => {
     return name.match(/^[_\-a-zA-Z][_\-a-zA-Z0-9]{4,}$/);
 };
