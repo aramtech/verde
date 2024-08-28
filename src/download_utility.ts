@@ -1,3 +1,4 @@
+import { createCacheWriteStream, createCachedFileReader, isFileCached } from "./cache";
 import { run_command } from "./exec";
 import { findProjectRoot, is_valid_relative_path } from "./fs";
 import { get_org_name_and_token, get_relative_utils_paths_json, store_relative_utils_path } from "./github";
@@ -16,12 +17,28 @@ export async function downloadRepoAsZip(owner: string, repo: string, branch: str
 
     const utils_dir = await get_utils_dir();
     const zipPath = path.join(utils_dir, `${repo}.zip`);
+    const project_root = await findProjectRoot();
 
     // Download the ZIP file
     console.log("here", {
         zipPath,
         utils_dir,
     });
+
+    if (await isFileCached(`${repo}_branch_${branch}.zip`)) {
+        console.log("File cached");
+
+        await createCachedFileReader(`${repo}_branch_${branch}.zip`)
+            .pipe(unzipper.Extract({ path: utils_dir }))
+            .promise();
+
+        run_command(`mv ${path.join(project_root, utils_dir, `${repo}-${branch}`)}   ${path.join(localPath)}`);
+
+        console.log("Extracted from cache successfully");
+
+        return;
+    }
+
     const response = await axios({
         url,
         method: "GET",
@@ -34,14 +51,23 @@ export async function downloadRepoAsZip(owner: string, repo: string, branch: str
 
     // Save the ZIP file
     response.data.pipe(fs.createWriteStream(zipPath));
-    const project_root = await findProjectRoot();
     return new Promise<void>((resolve, reject) => {
         response.data.on("end", async () => {
+            console.log("Writing downloaded file to cache...");
+
+            const cacheWriter = createCacheWriteStream(`${repo}_branch_${branch}.zip`);
+            for await (const chunk of fs.createReadStream(zipPath)) {
+                cacheWriter.write(chunk);
+            }
+            cacheWriter.close();
+            console.log("done");
+
             // Unzip the file
             await fs
                 .createReadStream(zipPath)
                 .pipe(unzipper.Extract({ path: utils_dir }))
                 .promise();
+
             // Clean up the ZIP file
             await fs.remove(zipPath);
 

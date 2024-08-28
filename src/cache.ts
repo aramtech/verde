@@ -1,5 +1,12 @@
 import Logger from "./logger";
-import { getStoredFileNames, getStoredFilePath, removeFilesFromStorage, saveToFileStorage } from "./storage";
+import {
+    createStoredFileReader,
+    createStoredFileWriter,
+    getStoredFileNames,
+    getStoredFilePath,
+    removeFilesFromStorage,
+    saveToFileStorage,
+} from "./storage";
 
 const isCacheEntry = (name: string) => name.startsWith("cache-");
 
@@ -41,4 +48,14 @@ export const isFileCached = async (name: string) => {
 export const getCachedFilePath = (name: string) => {
     const prefixedName = prefixName(name);
     return getStoredFilePath(prefixedName);
+};
+
+export const createCachedFileReader = (name: string) => {
+    const prefixedName = prefixName(name);
+    return createStoredFileReader(prefixedName);
+};
+
+export const createCacheWriteStream = (name: string) => {
+    const prefixedName = prefixName(name);
+    return createStoredFileWriter(prefixedName);
 };

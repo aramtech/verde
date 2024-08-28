@@ -97,3 +97,13 @@ export const isStoredAsEncrypted = async (name: string) => {
 };
 
 export const getStoredFilePath = (name: string) => nameToPath(name);
+
+export const createStoredFileReader = (name: string) => {
+    const path = nameToPath(name);
+    return fs.createReadStream(path);
+};
+
+export const createStoredFileWriter = (name: string) => {
+    const path = nameToPath(name);
+    return fs.createWriteStream(path);
+};
