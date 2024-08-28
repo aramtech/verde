@@ -96,4 +96,4 @@ export const isStoredAsEncrypted = async (name: string) => {
     return await fs.exists(path);
 };
 
-// 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
+export const getStoredFilePath = (name: string) => nameToPath(name);

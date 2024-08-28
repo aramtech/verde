@@ -15,6 +15,7 @@ import { readAnswerTo, readPrompt, requestPermsToRun } from "./prompt.js";
 import { compareVersions, parseUtilityVersion, type Version } from "./utility.ts";
 import { chunkArr } from "./array.ts";
 import { encryptAndSaveFileToStorage, isStoredAsEncrypted, retrieveEncryptedFileFromStorage } from "./storage.ts";
+import { getCachedFilePath, isFileCached } from "./cache.ts";
 
 export const org_name_to_api_link = (repo_name: string) => `https://api.github.com/orgs/${repo_name}`;
 export const repo_name_to_api_link = (repo_name: string) => `https://api.github.com/repos/${repo_name}`;
@@ -38,9 +39,53 @@ const download_repo_files = async (
         logger.fatal("Please install `tar` command line on your os to continue");
     }
 
-    loadingSpinner.start();
+    const new_project_full_path = path.resolve(new_project_path);
 
-    loadingSpinner.text = `Downloading: 0.00%`;
+    loadingSpinner.start();
+    loadingSpinner.text = `Checking cache for ${repo_name}`;
+
+    if (await isFileCached(`${repo_name}_branch_${branch}.tar.gz`)) {
+        loadingSpinner.text = `Found ${repo_name}, extracting...`;
+
+        const cachedFilePath = getCachedFilePath(`${repo_name}_branch_${branch}.tar.gz`);
+
+        run_command(`tar -xf ${cachedFilePath} -C ${new_project_full_path}`, {
+            stdio: "inherit",
+            encoding: "utf-8",
+        });
+
+        const extraction_path = path.join(
+            new_project_full_path,
+            Buffer.from(
+                run_command(`ls`, {
+                    encoding: "utf-8",
+                    cwd: new_project_full_path,
+                }),
+            )
+                .toString("utf-8")
+                .trim(),
+        );
+        run_command(`mv ${extraction_path}/* ./.`, {
+            encoding: "utf-8",
+            cwd: new_project_full_path,
+        });
+
+        run_command(`mv ${path.join(extraction_path, "/.vscode")} .`, {
+            encoding: "utf-8",
+            cwd: new_project_full_path,
+        });
+
+        run_command(`rm -rf ${extraction_path}`, {
+            encoding: "utf-8",
+            cwd: new_project_full_path,
+        });
+
+        loadingSpinner.text = "DONE!";
+
+        return;
+    }
+
+    loadingSpinner.text = `Not found, Downloading: 0.00%`;
 
     const request_body: AxiosRequestConfig<any> = {
         method: "GET",
