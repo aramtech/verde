@@ -1,4 +1,4 @@
-import Logger from "./logger";
+import Logger from "../logger";
 import {
     createStoredFileReader,
     createStoredFileWriter,
@@ -6,7 +6,7 @@ import {
     getStoredFilePath,
     removeFilesFromStorage,
     saveToFileStorage,
-} from "./storage";
+} from "./index";
 
 const isCacheEntry = (name: string) => name.startsWith("cache-");
 

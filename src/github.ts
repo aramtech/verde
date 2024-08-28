@@ -10,12 +10,16 @@ import { command_on_system, run_command } from "./exec.js";
 import { collectFilePathsIn, findProjectRoot, readJSON, storeJSON } from "./fs.ts";
 import { loadingSpinner, default as Logger, default as logger } from "./logger.js";
 import { CPU_COUNT } from "./os.ts";
-import { getUtilityByName, listUtilitiesInDirectory, selectUtilityByName, type ProjectContext } from "./project.ts";
-import { readAnswerTo, readPrompt, requestPermsToRun } from "./prompt.js";
+import { selectUtilityByName, type ProjectContext } from "./project.ts";
+import { readAnswerTo, readPrompt } from "./prompt.js";
 import { compareVersions, parseUtilityVersion, type Version } from "./utility.ts";
 import { chunkArr } from "./array.ts";
-import { encryptAndSaveFileToStorage, isStoredAsEncrypted, retrieveEncryptedFileFromStorage } from "./storage.ts";
-import { getCachedFilePath, isFileCached } from "./cache.ts";
+import {
+    encryptAndSaveFileToStorage,
+    isStoredAsEncrypted,
+    retrieveEncryptedFileFromStorage,
+} from "./storage/encrypted.ts";
+import { getCachedFilePath, isFileCached } from "./storage/cache.ts";
 
 export const org_name_to_api_link = (repo_name: string) => `https://api.github.com/orgs/${repo_name}`;
 export const repo_name_to_api_link = (repo_name: string) => `https://api.github.com/repos/${repo_name}`;

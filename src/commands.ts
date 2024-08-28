@@ -21,7 +21,7 @@ import {
 } from "./project";
 import { push_utility } from "./upload_git_tree";
 import { parseUtilityVersion, type Version } from "./utility";
-import { clearCachedItems, listCachedItems } from "./cache";
+import { clearCachedItems, listCachedItems } from "./storage/cache";
 
 const addConfigCommandToProgram = (program: Command) =>
     program.command("config").action(async () => {

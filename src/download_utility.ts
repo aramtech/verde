@@ -1,4 +1,4 @@
-import { createCacheWriteStream, createCachedFileReader, isFileCached } from "./cache";
+import { createCacheWriteStream, createCachedFileReader, isFileCached } from "./storage/cache";
 import { run_command } from "./exec";
 import { findProjectRoot, is_valid_relative_path } from "./fs";
 import { get_org_name_and_token, get_relative_utils_paths_json, store_relative_utils_path } from "./github";
