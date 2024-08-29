@@ -10,6 +10,7 @@
         "@types/bun": "latest",
         "@types/fs-extra": "^11.0.4",
         "@types/unzipper": "^0.10.10",
+        "nock": "^13.5.5",
         "prettier": "^3.3.3",
         "vitest": "^2.0.5"
     },
@@ -43,11 +44,5 @@
         "resetModules": true,
         "verbose": true,
         "resetMocks": true
-    },
-    "verde": {
-        "dest": "./server/utils",
-        "deps": {},
-        "grouping": [],
-        "org": "aramtech"
     }
 }

@@ -130,7 +130,7 @@ export async function check_if_repository_exists_in_org(org: string, repo: strin
 }
 
 export async function create_repository_in_org(org: string, repo: string, public_repo: boolean) {
-    console.log("creating repository");
+    logger.log("creating repository");
     const octokit = await get_octokit_client(org);
     const exists = await check_if_repository_exists_in_org(org, repo);
     if (!exists) {
@@ -204,7 +204,7 @@ export async function create_branch_if_not_exists(owner: string, repo: string, b
             repo,
             branch,
         });
-        console.log(`Branch ${branch} already exists.`);
+        logger.log(`Branch ${branch} already exists.`);
     } catch (error: any) {
         if (error.status === 404) {
             // Branch does not exist, create it from the base branch
@@ -221,7 +221,7 @@ export async function create_branch_if_not_exists(owner: string, repo: string, b
                 sha: baseBranchData.commit.sha,
             });
 
-            console.log(`Branch ${branch} created from ${baseBranch}.`);
+            logger.log(`Branch ${branch} created from ${baseBranch}.`);
         } else {
             throw error;
         }
@@ -248,7 +248,7 @@ export async function delete_file_from_repo(owner: string, repo: string, file_pa
             branch,
         });
 
-        console.log(`Deleted file: ${file_path}`);
+        logger.log(`Deleted file: ${file_path}`);
     } catch (error) {
         logger.fatal(`Error deleting file ${file_path}:`, error);
     }
@@ -301,7 +301,7 @@ export async function upload_file_to_repo(
             path: repoPath,
             ref: branch,
         });
-        console.log("existing file sha", (existingFile as any).sha);
+        logger.log("existing file sha", (existingFile as any).sha);
         // Update the existing file
         await octokit.repos.createOrUpdateFileContents({
             owner,
@@ -313,7 +313,7 @@ export async function upload_file_to_repo(
             branch,
         });
 
-        console.log(`Updated file: ${repoPath}`);
+        logger.log(`Updated file: ${repoPath}`);
         return;
     } catch (error: any) {
         if (error.status === 404) {
@@ -332,7 +332,7 @@ export async function upload_file_to_repo(
                 logger.fatal("reupload for new file error", error);
             }
 
-            console.log(`Created new file: ${repoPath}`);
+            logger.log(`Created new file: ${repoPath}`);
         } else {
             logger.fatal(`Error processing file ${repoPath}:`, error);
         }
@@ -347,7 +347,7 @@ export async function deleteBranchOnFailure(owner: string, repo: string, branch:
             repo,
             ref: `heads/${branch}`,
         });
-        console.log(`Branch ${branch} deleted successfully.`);
+        logger.log(`Branch ${branch} deleted successfully.`);
     } catch (error) {
         logger.fatal(`Failed to delete branch ${branch}:`, error);
     }
@@ -382,13 +382,13 @@ export async function forceUploadFileToRepo(
                 sha,
             });
 
-            console.log(`Deleted existing file: ${filePath}`);
+            logger.log(`Deleted existing file: ${filePath}`);
         } catch (error: any) {
             if (error.status !== 404) {
                 throw error; // Re-throw errors that aren't 404
             }
             // If the file doesn't exist, proceed to upload as new
-            console.log(`File ${filePath} does not exist, uploading as a new file.`);
+            logger.log(`File ${filePath} does not exist, uploading as a new file.`);
         }
 
         // Upload the file (as a new file or after deleting the old one)

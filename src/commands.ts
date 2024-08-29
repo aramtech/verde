@@ -33,7 +33,7 @@ const addListToProgram = (program: Command) =>
         }
 
         for (const config of context.utilities) {
-            console.log("Tool found: ", config.configFile.name);
+            logger.log("Tool found: ", config.configFile.name);
         }
     });
 
@@ -53,7 +53,7 @@ const addRemoveUtilityCommand = (program: Command) =>
 const addPushUtilityCommand = (program: Command) =>
     program.command("push [name]").action(async (utility_name?: string) => {
         if (utility_name) {
-            console.log("pushing single");
+            logger.log("pushing single");
             await push_utility({
                 context: projectContext, 
                 input_utility_name: utility_name, 

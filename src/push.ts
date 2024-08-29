@@ -1,301 +1,177 @@
-import { Octokit } from "@octokit/rest";
-import axios from "axios";
-import fs from "fs";
-import path from "path";
 import { chunkArr } from "./array";
 import { deleteBranchOnFailure, get_file_from_repo, get_utility_versions, type SingleGithubFile } from "./github";
 import logger from "./logger";
 import { CPU_COUNT } from "./os";
 import { checkUtility, projectContext, type ProjectContext } from "./project";
-import { upload_dir_octo } from "./push_directory";
 import { get_token } from "./tokens";
 import {
     collect_dependencies_list,
     compareVersions,
     isUtilityNameValid,
     parseUtilityVersion,
+    parseVersionOrExit,
     process_utility_identifier_input,
-    type Version,
 } from "./utility";
 
-const parseVersionOrExit = (v: string): Version => {
-    const parsed = parseUtilityVersion(v);
-    if (!parsed) {
-        logger.fatal(`${v} is not a valid version.`);
+import { Octokit } from "@octokit/rest";
+import { readFile } from "fs-extra";
+import path from "path";
+import { collectFilePathsIn } from "./fs";
+
+export const upload_dir_octo = async (
+    org_name: string,
+    repo_name: string,
+    token: string,
+    branch: string,
+    directory_full_path: string,
+) => {
+    // There are other ways to authenticate, check https://developer.github.com/v3/#authentication
+    const octo = new Octokit({
+        auth: token,
+    });
+    // For this, I was working on a organization repos, but it works for common repos also (replace org for owner)
+    const ORGANIZATION = org_name;
+    const REPO = repo_name;
+    console.log("listing repos for org", ORGANIZATION);
+    const repos = await octo.repos.listForOrg({
+        org: ORGANIZATION,
+        type: "all",
+        per_page: 10e4,
+    });
+    console.log(
+        "looking for repo",
+        repo_name,
+        "in",
+        repos.data.map((repo: any) => repo.name).filter(r => r.startsWith("rest")),
+    );
+    if (!repos.data.map((repo: any) => repo.name).includes(REPO)) {
+        console.log("creating repo since its not found");
+        await createRepo(octo, ORGANIZATION, REPO);
     }
-    return parsed as Version;
+    /**
+     * my-local-folder has files on its root, and subdirectories with files
+     */
+    console.log("uploading to repo");
+    await uploadToRepo(octo, directory_full_path, ORGANIZATION, REPO, branch);
 };
 
-// Helper to read directory contents recursively
-export async function readDirectoryRecursive(dirPath: string) {
-    const files = [] as string[];
-    const items = fs.readdirSync(dirPath);
+const createRepo = async (octo: Octokit, org: string, name: string) => {
+    await octo.repos.createInOrg({ org, name, auto_init: true });
+};
 
-    for (const item of items) {
-        const fullPath = path.join(dirPath, item);
-        const stat = fs.statSync(fullPath);
+const uploadToRepo = async (octo: Octokit, coursePath: string, org: string, repo: string, branch: string) => {
+    // gets commit's AND its tree's SHA
+    console.log("getting current commit");
+    const currentCommit = await getCurrentCommit(octo, org, repo);
+    console.log("collect file paths");
+    const filesPaths = await collectFilePathsIn(coursePath);
+    console.log("creating blobs");
+    const filesBlobs = await Promise.all(filesPaths.map(createBlobForFile(octo, org, repo)));
+    console.log("calculating relative paths");
+    const pathsForBlobs = filesPaths.map(fullPath => path.relative(coursePath, fullPath));
+    console.log("creating tree");
+    const newTree = await createNewTree(octo, org, repo, filesBlobs, pathsForBlobs, currentCommit.treeSha);
+    console.log("creating new commit");
+    const commitMessage = `branch: ${branch}`;
+    const newCommit = await createNewCommit(octo, org, repo, commitMessage, newTree.sha, currentCommit.commitSha);
+    console.log("setting branch to commit");
 
-        if (stat.isDirectory()) {
-            files.push(...(await readDirectoryRecursive(fullPath)));
-        } else {
-            files.push(fullPath);
-        }
-    }
-
-    return files;
-}
-
-// Create a new branch
-async function create_branch(org: string, repo: string, branch: string, base_branch: string, token: string) {
-    const url = `https://api.github.com/repos/${org}/${repo}/git/refs`;
-    const base_branchRef = await axios.get(`${url}/heads/${base_branch}`, {
-        headers: { Authorization: `token ${token}` },
+    await octo.git.createRef({
+        owner: org,
+        repo,
+        ref: `refs/heads/${branch}`,
+        sha: newCommit.sha,
     });
+};
 
-    const response = await axios.post(
-        url,
-        {
-            ref: `refs/heads/${branch}`,
-            sha: base_branchRef.data.object.sha,
-        },
-        { headers: { Authorization: `token ${token}` } },
-    );
+const getCurrentCommit = async (octo: Octokit, org: string, repo: string, branch: string = "main") => {
+    const { data: refData } = await octo.git.getRef({
+        owner: org,
+        repo,
+        ref: `heads/${branch}`,
+    });
+    const commitSha = refData.object.sha;
+    const { data: commitData } = await octo.git.getCommit({
+        owner: org,
+        repo,
+        commit_sha: commitSha,
+    });
+    return {
+        commitSha,
+        treeSha: commitData.tree.sha,
+    };
+};
 
-    return response.data.object.sha;
-}
+// Notice that readFile's utf8 is typed differently from Github's utf-8
+const getFileAsUTF8 = (filePath: string) => readFile(filePath, "utf8");
 
-// Create a blob for each file
-async function create_blob(org: string, repo: string, file_path: string, token: string) {
-    try {
-        const content = fs.readFileSync(file_path);
-        const base64Content = content.toString("base64");
+const createBlobForFile = (octo: Octokit, org: string, repo: string) => async (filePath: string) => {
+    const content = await getFileAsUTF8(filePath);
+    const blobData = await octo.git.createBlob({
+        owner: org,
+        repo,
+        content,
+        encoding: "utf-8",
+    });
+    return blobData.data;
+};
 
-        const url = `https://api.github.com/repos/${org}/${repo}/git/blobs`;
-        const response = await axios.post(
-            url,
-            {
-                content: base64Content,
-                encoding: "base64",
-            },
-            { headers: { Authorization: `token ${token}` } },
-        );
+const createNewTree = async (
+    octo: Octokit,
+    owner: string,
+    repo: string,
+    blobs: any[],
+    paths: string[],
+    parentTreeSha: string,
+) => {
+    // My custom config. Could be taken as parameters
+    const tree = blobs.map(({ sha }, index) => ({
+        path: paths[index],
+        mode: `100644`,
+        type: `blob`,
+        sha,
+    })) as any[];
+    const { data } = await octo.git.createTree({
+        owner,
+        repo,
+        tree,
+        base_tree: parentTreeSha,
+    });
+    return data;
+};
 
-        return response.data.sha;
-    } catch (error: any) {
-        logger.log("blob error", error.message);
-        throw error;
-    }
-}
-
-// Create a tree object
-async function create_tree(org: string, repo: string, files: string[], directory_path: string, token: string) {
-    const tree = await Promise.all(
-        files.map(async file_path => {
-            const fileSha = await create_blob(org, repo, file_path, token);
-            const relativePath = path.relative(directory_path, file_path).replace(/\\/g, "/");
-            logger.log("created_blob blob", {
-                relativePath,
-                fileSha,
-            });
-            return {
-                path: relativePath,
-                mode: "100644",
-                type: "blob",
-                sha: fileSha,
-            };
-        }),
-    );
-
-    const url = `https://api.github.com/repos/${org}/${repo}/git/trees`;
-    const response = await axios.post(
-        url,
-        {
-            tree,
-        },
-        { headers: { Authorization: `token ${token}` } },
-    );
-
-    return response.data.sha;
-}
-
-// Check if the repository is empty
-async function is_repo_empty(org: string, repo: string, token: string) {
-    try {
-        await axios.get(`https://api.github.com/repos/${org}/${repo}/git/refs/heads/main`, {
-            headers: { Authorization: `token ${token}` },
-        });
-        return false;
-    } catch (error: any) {
-        if (error.response && (error.response.status === 404 || error.response.status === 409)) {
-            return true; // No branches found, repository is empty
-        }
-        throw error;
-    }
-}
-
-async function setup_empty_repo(org_name: string, repo_name: string, branch: string, token: string) {
-    async function initializeRepo(orgName: string, repoName: string, branchName: string, token: string) {
-        const octokit = new Octokit({ auth: token });
-
-        // The file to add to the initial commit
-        const filePath = "README.md";
-        const fileContent = "# Initial Commit\nThis is the initial commit.";
-
-        // Convert content to Base64
-        const contentEncoded = Buffer.from(fileContent).toString("base64");
-
-        try {
-            // Step 1: Create a blob with the file content
-            const { data: blobData } = await octokit.git.createBlob({
-                owner: orgName,
-                repo: repoName,
-                content: contentEncoded,
-                encoding: "base64",
-            });
-
-            logger.log(`Blob created with SHA: ${blobData.sha}`);
-
-            // Step 2: Create a tree containing the blob
-            const { data: treeData } = await octokit.git.createTree({
-                owner: orgName,
-                repo: repoName,
-                tree: [
-                    {
-                        path: path.basename(filePath),
-                        mode: "100644",
-                        type: "blob",
-                        sha: blobData.sha,
-                    },
-                ],
-            });
-
-            logger.log(`Tree created with SHA: ${treeData.sha}`);
-
-            // Step 3: Create a commit with the tree
-            const { data: commitData } = await octokit.git.createCommit({
-                owner: orgName,
-                repo: repoName,
-                message: "Initial commit",
-                tree: treeData.sha,
-                parents: [], // No parent since it's the initial commit
-            });
-
-            logger.log(`Commit created with SHA: ${commitData.sha}`);
-
-            // Step 4: Create the branch reference pointing to the new commit
-            await octokit.git.createRef({
-                owner: orgName,
-                repo: repoName,
-                ref: `refs/heads/${branchName}`,
-                sha: commitData.sha,
-            });
-
-            logger.log(`Branch ${branchName} created with initial commit.`);
-        } catch (error: any) {
-            throw error;
-        }
-    }
-    await initializeRepo(org_name, repo_name, branch, token);
-}
-
-// Create a commit object
-async function create_commit(
+const createNewCommit = async (
+    octo: Octokit,
     org: string,
     repo: string,
-    tree_sha: string | undefined,
-    parent_sha: string | undefined,
-    commit_message: string,
-    token: string,
-) {
-    const url = `https://api.github.com/repos/${org}/${repo}/git/commits`;
-    const data = {
-        message: commit_message,
-        tree: tree_sha,
-    } as any;
-
-    if (parent_sha) {
-        data.parents = [parent_sha];
-    }
-
-    const response = await axios.post(url, data, { headers: { Authorization: `token ${token}` } });
-
-    return response.data.sha;
-}
-
-// Update branch to point to the new commit
-async function update_branch(org: string, repo: string, branch: string, commit_sha: string, token: string) {
-    const url = `https://api.github.com/repos/${org}/${repo}/git/refs/heads/${branch}`;
-    await axios.patch(url, { sha: commit_sha, force: true }, { headers: { Authorization: `token ${token}` } });
-}
-async function create_branch_for_initial_push(
-    org: string,
-    repo: string,
-    branch: string,
-    commit_sha: string,
-    token: string,
-) {
-    const url = `https://api.github.com/repos/${org}/${repo}/git/refs`;
-    const response = await axios.post(
-        url,
-        {
-            ref: `refs/heads/${branch}`,
-            sha: commit_sha,
-        },
-        { headers: { Authorization: `token ${token}` } },
-    );
-
-    return response.data.object.sha;
-}
-// Main function to upload directory as a single commit
-export async function upload_directory(
-    org: string,
-    repo: string,
-    branch: string,
-    base_branch: string | undefined,
-    directory_path: string,
-    token: string,
-) {
-    try {
-        const repo_empty = await is_repo_empty(org, repo, token);
-        if (repo_empty) {
-            await setup_empty_repo(org, repo, branch, token);
-        }
-        logger.log("repos is empty", repo_empty);
-        let base_sha: string | undefined = undefined;
-        if (!repo_empty && base_branch) {
-            // If the repo is not empty, create a branch or reset it
-            base_sha = await create_branch(org, repo, branch, base_branch, token);
-        }
-        // Get all files in the directory
-        const files = await readDirectoryRecursive(directory_path);
-
-        // Create a tree object with all files
-        const treeSha = await create_tree(org, repo, files, directory_path, token);
-
-        // Create a commit that points to the tree
-        const commit_sha = await create_commit(
-            org,
+    message: string,
+    currentTreeSha: string,
+    currentCommitSha: string,
+) =>
+    (
+        await octo.git.createCommit({
+            owner: org,
             repo,
-            treeSha,
-            base_sha,
-            `Add ${path.basename(directory_path)} contents`,
-            token,
-        );
-        if (repo_empty) {
-            logger.log("repo is empty");
-            // If the repository is empty, create the initial branch
-            await create_branch_for_initial_push(org, repo, branch, commit_sha, token);
-        } else {
-            // If the repository is not empty, force update the branch to point to the new commit
-            await update_branch(org, repo, branch, commit_sha, token);
-        }
+            message,
+            tree: currentTreeSha,
+            parents: [currentCommitSha],
+        })
+    ).data;
 
-        logger.log("Directory uploaded successfully as a single commit");
-    } catch (error: any) {
-        logger.error("Error during upload:", error.message, JSON.stringify(error, null, 4));
-        throw new Error("Upload failed");
-    }
-}
+const setBranchToCommit = async (
+    octo: Octokit,
+    org: string,
+    repo: string,
+    branch: string = `main`,
+    commitSha: string,
+) =>
+    await octo.git.updateRef({
+        owner: org,
+        repo,
+        ref: `refs/heads/${branch}`,
+        sha: commitSha,
+        force: true,
+    });
 
 export const push_utility = async ({
     main_dep,
@@ -335,7 +211,7 @@ export const push_utility = async ({
         logger.fatal("Provided Utility Name is not valid", input_utility_name);
     }
 
-    logger.log("processing identifier")
+    logger.log("processing identifier");
     const {
         owner,
         repo,
@@ -419,11 +295,11 @@ export const push_utility = async ({
                     name: util.configFile.name,
                 });
                 await push();
-            }else{
+            } else {
                 const remote_util_config: typeof util.configFile = JSON.parse(
                     Buffer.from(last_remote_config_file.content, "base64").toString("utf-8"),
                 );
-    
+
                 if (remote_util_config.hash != util.configFile.hash) {
                     logger.warning(
                         `utility: ${util.configFile.name} ,` +
@@ -431,9 +307,8 @@ export const push_utility = async ({
                     );
                 } else {
                     logger.success(`utility ${util.configFile.name} is up to date: ${util.configFile.version}`);
-                }                
+                }
             }
-
         }
     } else {
         await push();
@@ -441,28 +316,37 @@ export const push_utility = async ({
 
     if (main_dep) {
         projectContext.packageFile.verde.dependencies[repo] = {
-            owner: owner, 
-            repo: repo, 
-            update_policy: projectContext.packageFile.verde.dependencies[repo]?.update_policy || "minor", 
-            version: util.configFile.version as any, 
-        }
+            owner: owner,
+            repo: repo,
+            update_policy: projectContext.packageFile.verde.dependencies[repo]?.update_policy || "minor",
+            version: util.configFile.version as any,
+        };
     }
 };
 
 export const pushAllUtilities = async (context: ProjectContext) => {
     const chunked = chunkArr(context.utilities, CPU_COUNT * 2);
 
-    const all_dependencies = await collect_dependencies_list(projectContext, projectContext.packageFile.verde.dependencies)
+    const all_dependencies = await collect_dependencies_list(
+        projectContext,
+        projectContext.packageFile.verde.dependencies,
+    );
 
-    const excess_utilities = projectContext.utilities.filter(u=>{
-        return !all_dependencies[u.configFile.name]
-    })
+    const excess_utilities = projectContext.utilities.filter(u => {
+        return !all_dependencies[u.configFile.name];
+    });
 
     for (const chunk of chunked) {
-        await Promise.all(chunk.map(u => push_utility({
-            context: projectContext, 
-            input_utility_name: u.configFile.name, 
-            main_dep: !!projectContext.packageFile.verde.dependencies[u.configFile.name] || !!excess_utilities.find(u=>u.configFile.name == u.configFile.name)
-        })));
+        await Promise.all(
+            chunk.map(u =>
+                push_utility({
+                    context: projectContext,
+                    input_utility_name: u.configFile.name,
+                    main_dep:
+                        !!projectContext.packageFile.verde.dependencies[u.configFile.name] ||
+                        !!excess_utilities.find(u => u.configFile.name == u.configFile.name),
+                }),
+            ),
+        );
     }
 };

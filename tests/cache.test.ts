@@ -4,7 +4,7 @@ import { Command } from "commander";
 import { randomInt } from "crypto";
 import path from "path";
 import { storeJSON } from "../src/fs";
-import { cache } from "../src/cache";
+import { cache } from "../src/storage/cache";
 import fs from "fs-extra";
 import { HOME_DIR_PATH } from "../src/os";
 

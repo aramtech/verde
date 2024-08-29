@@ -3,6 +3,7 @@ import { findProjectRoot, is_valid_relative_path, projectRoot } from "./fs";
 import { get_relative_utils_paths_json, store_relative_utils_path } from "./github";
 import logger from "./logger";
 import { readAnswerTo, readPrompt } from "./prompt";
+import { createCacheWriteStream } from "./storage/cache";
 import { get_token } from "./tokens";
 
 const axios = (await import("axios")).default;
@@ -42,11 +43,21 @@ export async function downloadRepoAsZip({
     const project_root = projectRoot;
     return new Promise<void>((resolve, reject) => {
         response.data.on("end", async () => {
+            logger.log("Writing downloaded file to cache...");
+
+            const cacheWriter = createCacheWriteStream(`${repo}_branch_${branch}.zip`);
+            for await (const chunk of fs.createReadStream(zipPath)) {
+                cacheWriter.write(chunk);
+            }
+            cacheWriter.close();
+            logger.log("done");
+
             // Unzip the file
             await fs
                 .createReadStream(zipPath)
                 .pipe(unzipper.Extract({ path: path.join(projectRoot, relative_installation_directory) }))
                 .promise();
+
             // Clean up the ZIP file
             await fs.remove(zipPath);
 
