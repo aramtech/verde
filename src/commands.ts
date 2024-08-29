@@ -7,7 +7,7 @@ import {
     pull_utility,
 } from "./github";
 
-import { assembleProjectContext, getUtilityByName, pushAllUtilities } from "./project";
+import { addUtilityToProject, assembleProjectContext, getUtilityByName, pushAllUtilities } from "./project";
 
 import logger from "./logger";
 import {
@@ -135,7 +135,7 @@ const addPullCommand = (program: Command) =>
                     logger.fatal(`${version} is not a valid version`);
                     return;
                 } else if (name) {
-                    await pull_utility(context, name, version);
+                    await addUtilityToProject(context, { name, version });
                     return;
                 }
 

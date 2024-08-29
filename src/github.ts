@@ -815,7 +815,11 @@ export type SingleGithubFile = {
     };
 };
 
-export const pull_utility = async (context: ProjectContext, utility_name: string, version?: string) => {
+export const pull_utility = async (
+    context: ProjectContext,
+    utility_name: string,
+    version?: string,
+): Promise<Version> => {
     /**
      *  - check if the utility has remote version
      *    - if not prompt that this utility does not exist remotely
@@ -846,14 +850,14 @@ export const pull_utility = async (context: ProjectContext, utility_name: string
     const versions = await get_utility_versions(record.org_name, utility_name);
     if (!versions.length || !versions.at(-1)) {
         logger.fatal("Remote Utility is not detected, and have no versions");
-        return;
+        process.exit(1);
     }
     let selected_version: Version;
     if (version) {
         const found_version = versions.find(v => (v as Version).version == version);
         if (!found_version) {
             logger.fatal("Specified version", version, "is not found remotely");
-            return;
+            process.exit(1);
         }
         selected_version = found_version;
     } else {
@@ -878,7 +882,7 @@ export const pull_utility = async (context: ProjectContext, utility_name: string
 
     if (!util) {
         await pull();
-        return;
+        return selected_version;
     }
 
     const utilVersion = parseVersionOrExit(util.configFile.version);
@@ -887,18 +891,22 @@ export const pull_utility = async (context: ProjectContext, utility_name: string
         console.log("requesting specific version", version);
 
         if (!compareVersions(selected_version, "==", utilVersion)) {
-            return await pull();
+            await pull();
+            return selected_version;
         } else {
-            return up_to_date();
+            up_to_date();
+            return selected_version;
         }
     } else {
         if (compareVersions(selected_version, ">", utilVersion)) {
             await pull();
+            return selected_version;
         } else if (compareVersions(selected_version, "<", utilVersion)) {
             logger.warning("you local version is greater than remote latest, please push updates");
-            return;
+            return selected_version;
         } else {
-            return up_to_date();
+            up_to_date();
+            return selected_version;
         }
     }
 };

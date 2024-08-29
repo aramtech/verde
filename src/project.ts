@@ -15,6 +15,7 @@ import { CPU_COUNT } from "./os";
 import { push_utility } from "./upload_git_tree";
 import { type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash } from "./utility";
 import { chunkArr } from "./array";
+import { get_utility_versions, pull_utility } from "./github";
 
 const utilityConfigFileName = "utils.json";
 
@@ -46,7 +47,7 @@ export const listUtilitiesInDirectory = async (projectPath: string): Promise<Uti
 };
 
 type VerdeConfig = {
-    deps: {};
+    deps: Record<string, string>;
     dest: string;
     org: string;
     grouping: Array<{
@@ -255,4 +256,17 @@ export const pushAllUtilities = async (context: ProjectContext) => {
 export const addConfigToProjectPackageFile = async (context: ProjectContext) => {
     await storeJSON<PackageFile>(join(context.path, "package.json"), context.packageFile);
     console.log("Your verde config: \n", JSON.stringify(context.packageFile.verde, undefined, 4));
+};
+
+export const addUtilityToProject = async (ctx: ProjectContext, utility: { name: string; version?: string }) => {
+    const downloadedVersion = await pull_utility(ctx, utility.name, utility.version);
+
+    const verdeConfig = ctx.packageFile.verde;
+    const nextConfig: VerdeConfig = {
+        ...verdeConfig,
+        deps: { ...verdeConfig.deps, [utility.name]: downloadedVersion.version },
+    };
+    const nextPackageFile: PackageFile = { ...ctx.packageFile, verde: nextConfig };
+
+    await storeJSON(join(ctx.path, "package.json"), nextPackageFile);
 };

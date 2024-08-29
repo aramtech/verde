@@ -28,7 +28,7 @@ describe("versions", () => {
     test("list-versions command: no matching utility found.", async () => {
         vi.spyOn(console, "error");
 
-        const testDirPath = await moveToTestDir();
+        await moveToTestDir();
 
         await storeJSON("package.json", { name: "foo", version: "1.0.0" });
 
