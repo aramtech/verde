@@ -1,19 +1,15 @@
 import { describe, test, beforeAll, beforeEach, afterEach, vi, expect } from "vitest";
 import { addCommands } from "../src/commands";
 import { Command } from "commander";
-import { existsSync } from "node:fs";
-import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
-import { readJSON, storeJSON } from "../src/fs";
-import { type UtilityFile } from "../src/utility";
+import { storeJSON } from "../src/fs";
+import { cache } from "../src/cache";
+import fs from "fs-extra";
+import { HOME_DIR_PATH } from "../src/os";
 
-describe("reveal", () => {
+describe("cache", () => {
     let originalCwd: string = process.cwd();
-
-    beforeAll(async () => {
-        fs.exists = existsSync as any;
-    });
 
     beforeEach(() => {
         vi.spyOn(process, "exit").mockImplementation(() => {
@@ -32,7 +28,7 @@ describe("reveal", () => {
         return name;
     };
 
-    test("reveal command: no matching utility found.", async () => {
+    test("cache command: no cache entries.", async () => {
         vi.spyOn(console, "error");
 
         const testDirPath = await moveToTestDir();
@@ -46,13 +42,11 @@ describe("reveal", () => {
         );
 
         const cmd = addCommands(new Command());
-        await cmd.parseAsync(["node", "verde", "reveal", "baz"]);
-
-        expect(console.error).toHaveBeenCalledWith("could not find utility with name baz");
+        await cmd.parseAsync(["node", "verde", "cache"]);
     });
 
-    test("reveal command: should update the config file of the utility.", async () => {
-        vi.spyOn(console, "error");
+    test("cache command: should list entry that was added right before calling the command.", async () => {
+        vi.spyOn(console, "log");
 
         const testDirPath = await moveToTestDir();
 
@@ -64,13 +58,32 @@ describe("reveal", () => {
             JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
         );
 
+        await cache("foo.js", Buffer.from("Hello world"));
+
         const cmd = addCommands(new Command());
-        await cmd.parseAsync(["node", "verde", "reveal", "foo"]);
+        await cmd.parseAsync(["node", "verde", "cache", "list"]);
 
-        expect(console.error).not.toHaveBeenCalledWith("could not find utility with name foo");
+        expect(console.log).toHaveBeenCalledWith(`Found entry with name: foo.js`);
+    });
 
-        const utilFile = await readJSON<UtilityFile>("./foo-util/utils.json");
+    test("cache command: clear subcommand should clear the cache.", async () => {
+        vi.spyOn(fs, "remove").mockResolvedValue(undefined);
 
-        expect(utilFile.private).toBe(false);
+        const testDirPath = await moveToTestDir();
+
+        await storeJSON("package.json", { name: "FOO" });
+
+        await fs.mkdir(path.join(testDirPath, "foo-util"));
+        await fs.writeFile(
+            path.join(testDirPath, "foo-util", "utils.json"),
+            JSON.stringify({ name: "foo", deps: {}, version: "10.0.0", hash: "foo" }),
+        );
+
+        await cache("baz.js", Buffer.from("// baz!"));
+
+        const cmd = addCommands(new Command());
+        await cmd.parseAsync(["node", "verde", "cache", "clear"]);
+
+        expect(fs.remove).toHaveBeenCalledWith(path.join(HOME_DIR_PATH, ".verde", "cache-baz.js"));
     });
 });

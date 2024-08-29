@@ -1,8 +1,10 @@
 import enq from "enquirer";
 
-export const read_answer_to = async (question: string) => {
+export const readAnswerTo = async (question: string, opts?: { type: "input" | "password" }) => {
+    const type = opts?.type || "input";
+
     const { input }: { input: string } = await enq.prompt({
-        type: "input",
+        type,
         name: "input",
         message: question,
         required: true,
@@ -11,7 +13,7 @@ export const read_answer_to = async (question: string) => {
     return input;
 };
 
-export const read_choice = async (question: string, choices: string[]) => {
+export const readPrompt = async (question: string, choices: string[]) => {
     const { input }: { input: string } = await enq.prompt({
         type: "select",
         name: "input",
@@ -20,4 +22,21 @@ export const read_choice = async (question: string, choices: string[]) => {
     });
 
     return input;
+};
+
+export const requestPermsToRunWithCb = async (msg: string, cb: () => Promise<void> | void) => {
+    const answer = await readPrompt(msg, ["yes", "no"]);
+
+    if (answer === "yes") {
+        await cb();
+    }
+};
+
+export const requestPermsToRun = async (msg: string) => {
+    const answer = await readPrompt(msg, ["yes", "no"]);
+
+    if (answer === "yes") {
+        return true
+    }
+    return false
 };

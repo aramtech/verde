@@ -1,51 +1,58 @@
 import { run_command } from "./exec";
-import { find_project_root, is_valid_relative_path } from "./fs";
-import { get_org_name_and_token, get_relative_utils_paths_json, store_relative_utils_path } from "./github";
+import { findProjectRoot, is_valid_relative_path, projectRoot } from "./fs";
+import { get_relative_utils_paths_json, store_relative_utils_path } from "./github";
 import logger from "./logger";
-import { read_answer_to, read_choice } from "./prompt";
+import { readAnswerTo, readPrompt } from "./prompt";
+import { get_token } from "./tokens";
 
 const axios = (await import("axios")).default;
 const fs = (await import("fs-extra")).default;
 const path = (await import("path")).default;
 const unzipper = (await import("unzipper")).default;
 
-export async function downloadRepoAsZip(owner: string, repo: string, branch: string, localPath: string) {
+export async function downloadRepoAsZip({
+    owner,
+    repo,
+    branch,
+    relative_installation_directory,
+}: {
+    owner: string;
+    repo: string;
+    branch: string;
+    relative_installation_directory: string;
+}) {
     const url = `https://github.com/${owner}/${repo}/archive/refs/heads/${branch}.zip`;
-    console.log(url);
-    const record = await get_org_name_and_token();
+    const token = await get_token(owner);
 
-    const utils_dir = await get_utils_dir();
-    const zipPath = path.join(utils_dir, `${repo}.zip`);
+    const zipPath = path.join(projectRoot, relative_installation_directory, `${repo}.zip`);
 
     // Download the ZIP file
-    console.log("here", {
-        zipPath,
-        utils_dir,
-    });
     const response = await axios({
         url,
         method: "GET",
         responseType: "stream",
         headers: {
-            Authorization: `Bearer ${record.token}`,
+            Authorization: `Bearer ${token}`,
             "X-GitHub-Api-Version": "2022-11-28",
         },
     });
 
     // Save the ZIP file
     response.data.pipe(fs.createWriteStream(zipPath));
-    const project_root = await find_project_root();
+    const project_root = projectRoot;
     return new Promise<void>((resolve, reject) => {
         response.data.on("end", async () => {
             // Unzip the file
             await fs
                 .createReadStream(zipPath)
-                .pipe(unzipper.Extract({ path: utils_dir }))
+                .pipe(unzipper.Extract({ path: path.join(projectRoot, relative_installation_directory) }))
                 .promise();
             // Clean up the ZIP file
             await fs.remove(zipPath);
 
-            run_command(`mv ${path.join(project_root, utils_dir, `${repo}-${branch}`)}   ${path.join(localPath)}`);
+            run_command(
+                `mv ${path.join(project_root, relative_installation_directory, `${repo}-${branch}`)}   ${path.join(projectRoot, relative_installation_directory, repo)}`,
+            );
             resolve();
         });
 
@@ -60,7 +67,7 @@ const get_utils_dir = async () => {
     }
 
     const tokens_store = await get_relative_utils_paths_json();
-    const project_root = await find_project_root();
+    const project_root = await findProjectRoot();
 
     const record = tokens_store[project_root];
 
@@ -70,7 +77,7 @@ const get_utils_dir = async () => {
 
     const utility_relative_path = await ask_for_utility_relative_path();
 
-    const choice: "yes" | "no" = (await read_choice("would you like to store utils relative path", ["yes", "no"])) as
+    const choice: "yes" | "no" = (await readPrompt("would you like to store utils relative path", ["yes", "no"])) as
         | "yes"
         | "no";
 
@@ -88,7 +95,7 @@ async function ask_for_utility_relative_path() {
             logger.fatal("Failed to input valid utility relative path");
             process.exit(1);
         }
-        const answer = await read_answer_to("where do you store utils in current project");
+        const answer = await readAnswerTo("where do you store utils in current project");
         const valid = await is_valid_relative_path(answer);
         if (!valid) {
             logger.error(
@@ -97,7 +104,7 @@ async function ask_for_utility_relative_path() {
             try_count += 1;
             continue;
         }
-        if (!fs.existsSync(path.join(await find_project_root(), answer))) {
+        if (!fs.existsSync(path.join(await findProjectRoot(), answer))) {
             logger.error(
                 'invalid utilities path it must be simple directory path that exists in your project for example "server/utils"',
             );
@@ -108,20 +115,26 @@ async function ask_for_utility_relative_path() {
     }
 }
 
-export const download_utility = async (utility_name: string, version: string) => {
+export const download_utility = async (
+    owner: string,
+    utility_name: string,
+    version: string,
+    utility_parent_dir_relative_path: string,
+) => {
     try {
-        const record = await get_org_name_and_token();
-        const utils_dir = await get_utils_dir();
-        console.log("utils_dir", utils_dir);
-        const utility_full_path = path.join(await find_project_root(), utils_dir, utility_name);
+        const utility_full_path = path.join(projectRoot, utility_parent_dir_relative_path, utility_name);
         if (fs.existsSync(utility_full_path)) {
             fs.rmSync(utility_full_path, {
                 recursive: true,
                 force: true,
             });
         }
-
-        await downloadRepoAsZip(record.org_name, utility_name, version, utility_full_path);
+        await downloadRepoAsZip({
+            owner,
+            repo: utility_name,
+            branch: version,
+            relative_installation_directory: utility_parent_dir_relative_path,
+        });
     } catch (error) {
         logger.fatal("Failed to download utility", utility_name, error);
     }

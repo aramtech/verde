@@ -2,19 +2,29 @@ import { Octokit } from "@octokit/rest";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import { find_project_root } from "./fs";
-import {
-    compare_version,
-    deleteBranchOnFailure,
-    get_file_from_repo,
-    get_org_name_and_token,
-    get_utility_versions,
-    type SingleGithubFile,
-} from "./github";
+import { chunkArr } from "./array";
+import { deleteBranchOnFailure, get_file_from_repo, get_utility_versions, type SingleGithubFile } from "./github";
 import logger from "./logger";
-import { checkUtility, listUtilitiesInDirectory } from "./project";
+import { CPU_COUNT } from "./os";
+import { checkUtility, projectContext, type ProjectContext } from "./project";
 import { upload_dir_octo } from "./push_directory";
-import { isUtilityNameValid, parseUtilityVersion } from "./utility";
+import { get_token } from "./tokens";
+import {
+    collect_dependencies_list,
+    compareVersions,
+    isUtilityNameValid,
+    parseUtilityVersion,
+    process_utility_identifier_input,
+    type Version,
+} from "./utility";
+
+const parseVersionOrExit = (v: string): Version => {
+    const parsed = parseUtilityVersion(v);
+    if (!parsed) {
+        logger.fatal(`${v} is not a valid version.`);
+    }
+    return parsed as Version;
+};
 
 // Helper to read directory contents recursively
 export async function readDirectoryRecursive(dirPath: string) {
@@ -72,7 +82,7 @@ async function create_blob(org: string, repo: string, file_path: string, token: 
 
         return response.data.sha;
     } catch (error: any) {
-        console.log("blob error", error.message);
+        logger.log("blob error", error.message);
         throw error;
     }
 }
@@ -83,7 +93,7 @@ async function create_tree(org: string, repo: string, files: string[], directory
         files.map(async file_path => {
             const fileSha = await create_blob(org, repo, file_path, token);
             const relativePath = path.relative(directory_path, file_path).replace(/\\/g, "/");
-            console.log("created_blob blob", {
+            logger.log("created_blob blob", {
                 relativePath,
                 fileSha,
             });
@@ -143,7 +153,7 @@ async function setup_empty_repo(org_name: string, repo_name: string, branch: str
                 encoding: "base64",
             });
 
-            console.log(`Blob created with SHA: ${blobData.sha}`);
+            logger.log(`Blob created with SHA: ${blobData.sha}`);
 
             // Step 2: Create a tree containing the blob
             const { data: treeData } = await octokit.git.createTree({
@@ -159,7 +169,7 @@ async function setup_empty_repo(org_name: string, repo_name: string, branch: str
                 ],
             });
 
-            console.log(`Tree created with SHA: ${treeData.sha}`);
+            logger.log(`Tree created with SHA: ${treeData.sha}`);
 
             // Step 3: Create a commit with the tree
             const { data: commitData } = await octokit.git.createCommit({
@@ -170,7 +180,7 @@ async function setup_empty_repo(org_name: string, repo_name: string, branch: str
                 parents: [], // No parent since it's the initial commit
             });
 
-            console.log(`Commit created with SHA: ${commitData.sha}`);
+            logger.log(`Commit created with SHA: ${commitData.sha}`);
 
             // Step 4: Create the branch reference pointing to the new commit
             await octokit.git.createRef({
@@ -180,7 +190,7 @@ async function setup_empty_repo(org_name: string, repo_name: string, branch: str
                 sha: commitData.sha,
             });
 
-            console.log(`Branch ${branchName} created with initial commit.`);
+            logger.log(`Branch ${branchName} created with initial commit.`);
         } catch (error: any) {
             throw error;
         }
@@ -250,7 +260,7 @@ export async function upload_directory(
         if (repo_empty) {
             await setup_empty_repo(org, repo, branch, token);
         }
-        console.log("repos is empty", repo_empty);
+        logger.log("repos is empty", repo_empty);
         let base_sha: string | undefined = undefined;
         if (!repo_empty && base_branch) {
             // If the repo is not empty, create a branch or reset it
@@ -272,7 +282,7 @@ export async function upload_directory(
             token,
         );
         if (repo_empty) {
-            console.log("repo is empty");
+            logger.log("repo is empty");
             // If the repository is empty, create the initial branch
             await create_branch_for_initial_push(org, repo, branch, commit_sha, token);
         } else {
@@ -280,14 +290,22 @@ export async function upload_directory(
             await update_branch(org, repo, branch, commit_sha, token);
         }
 
-        console.log("Directory uploaded successfully as a single commit");
+        logger.log("Directory uploaded successfully as a single commit");
     } catch (error: any) {
         logger.error("Error during upload:", error.message, JSON.stringify(error, null, 4));
         throw new Error("Upload failed");
     }
 }
 
-export const push_utility = async (utility_name: string) => {
+export const push_utility = async ({
+    main_dep,
+    context,
+    input_utility_name,
+}: {
+    context: ProjectContext;
+    input_utility_name: string;
+    main_dep: boolean;
+}) => {
     /**
      * - make sure utility actually exists --
      * - validate version number --
@@ -311,10 +329,27 @@ export const push_utility = async (utility_name: string) => {
      *       - if current less than remote prompt that you are not up to date remote version is greater --
      *
      */
-    console.log("listing all utilities");
-    const utils = await listUtilitiesInDirectory(await find_project_root());
 
-    console.log("looking for util");
+    const valid_name = isUtilityNameValid(input_utility_name);
+    if (!valid_name) {
+        logger.fatal("Provided Utility Name is not valid", input_utility_name);
+    }
+
+    logger.log("processing identifier")
+    const {
+        owner,
+        repo,
+        utility_current_owner_different_from_provided,
+        utility_exists_on_project,
+        utility_parent_dir_relative_path,
+    } = await process_utility_identifier_input(input_utility_name);
+
+    const utility_name = repo;
+
+    logger.log("listing all utilities");
+    const utils = context.utilities;
+
+    logger.log("looking for utility");
     const util = utils.find(u => u.configFile.name == utility_name);
 
     if (!util) {
@@ -322,8 +357,8 @@ export const push_utility = async (utility_name: string) => {
         return;
     }
 
-    console.log("updating utility hash");
-    const hash = await checkUtility(util.configFile.name);
+    logger.log("updating utility hash");
+    const hash = await checkUtility(context, util.configFile.name);
     util.configFile.hash = hash.currentHash;
 
     if (util.configFile.private) {
@@ -331,53 +366,49 @@ export const push_utility = async (utility_name: string) => {
         return;
     }
 
-    console.log("validating version");
+    logger.log("validating version");
     if (!parseUtilityVersion(util.configFile.version)) {
         logger.fatal(`${util.configFile.version} is not a valid version`);
         return;
     }
 
-    console.log("validating name");
+    logger.log("validating name");
     if (!isUtilityNameValid(util.configFile.name)) {
         logger.fatal(`"${util.configFile.name}" is not a valid name.`);
         return;
     }
 
-    console.log("getting org and token");
-    const record = await get_org_name_and_token();
+    logger.log("getting token");
+    const token = await get_token(owner);
 
-    console.log("collecting utility versions");
-    let utility_versions = await get_utility_versions(record.org_name, util.configFile.name);
+    logger.log("collecting utility versions");
+    let utility_versions = await get_utility_versions(owner, util.configFile.name);
 
     const last_version = utility_versions.at(-1);
 
     const push = async () => {
-        console.log("pushing...");
+        logger.log("pushing...");
         try {
             // upload the file as a block to a new branch
-            await upload_dir_octo(
-                record.org_name,
-                util.configFile.name,
-                record.token,
-                util.configFile.version,
-                util.path,
-            );
+            await upload_dir_octo(owner, util.configFile.name, token, util.configFile.version, util.path);
         } catch (error) {
             console.error(error);
-            await deleteBranchOnFailure(record.org_name, util.configFile.name, util.configFile.version);
+            await deleteBranchOnFailure(owner, util.configFile.name, util.configFile.version);
         }
     };
+
     if (last_version) {
-        if (compare_version(last_version.version, "<", util.configFile.version)) {
-            return await push();
-        } else if (compare_version(last_version.version, ">", util.configFile.version)) {
+        const utilVersion = parseVersionOrExit(util.configFile.version);
+
+        if (compareVersions(last_version, "<", utilVersion)) {
+            await push();
+        } else if (compareVersions(last_version, ">", utilVersion)) {
             logger.log(
                 `utility ${utility_name} remote version (${last_version.version}) is greater than the local version ${util.configFile.version}`,
             );
-            return;
         } else {
             const last_remote_config_file = (await get_file_from_repo(
-                record.org_name,
+                owner,
                 util.configFile.name,
                 "utils.json",
                 last_version.version,
@@ -388,23 +419,50 @@ export const push_utility = async (utility_name: string) => {
                     name: util.configFile.name,
                 });
                 await push();
-                return;
-            }
-            const remote_util_config: typeof util.configFile = JSON.parse(
-                Buffer.from(last_remote_config_file.content, "base64").toString("utf-8"),
-            );
-
-            if (remote_util_config.hash != util.configFile.hash) {
-                logger.warning(
-                    `utility: ${util.configFile.name} ,` +
-                        "remote content last version equalt local, but the content is different are you sure you updated the version?",
+            }else{
+                const remote_util_config: typeof util.configFile = JSON.parse(
+                    Buffer.from(last_remote_config_file.content, "base64").toString("utf-8"),
                 );
-            } else {
-                logger.success(`utility ${util.configFile.name} is up to date: ${util.configFile.version}`);
+    
+                if (remote_util_config.hash != util.configFile.hash) {
+                    logger.warning(
+                        `utility: ${util.configFile.name} ,` +
+                            "remote content last version equalt local, but the content is different are you sure you updated the version?",
+                    );
+                } else {
+                    logger.success(`utility ${util.configFile.name} is up to date: ${util.configFile.version}`);
+                }                
             }
-            return;
+
         }
     } else {
-        return await push();
+        await push();
+    }
+
+    if (main_dep) {
+        projectContext.packageFile.verde.dependencies[repo] = {
+            owner: owner, 
+            repo: repo, 
+            update_policy: projectContext.packageFile.verde.dependencies[repo]?.update_policy || "minor", 
+            version: util.configFile.version as any, 
+        }
+    }
+};
+
+export const pushAllUtilities = async (context: ProjectContext) => {
+    const chunked = chunkArr(context.utilities, CPU_COUNT * 2);
+
+    const all_dependencies = await collect_dependencies_list(projectContext, projectContext.packageFile.verde.dependencies)
+
+    const excess_utilities = projectContext.utilities.filter(u=>{
+        return !all_dependencies[u.configFile.name]
+    })
+
+    for (const chunk of chunked) {
+        await Promise.all(chunk.map(u => push_utility({
+            context: projectContext, 
+            input_utility_name: u.configFile.name, 
+            main_dep: !!projectContext.packageFile.verde.dependencies[u.configFile.name] || !!excess_utilities.find(u=>u.configFile.name == u.configFile.name)
+        })));
     }
 };

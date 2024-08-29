@@ -55,8 +55,10 @@ export const fatal = (...message: any[]): never => {
     });
 };
 export const log = (...message: any[]) => {
-    spin_wrapper(() => {
-        console.log(...message);
-    });
+    if (loadingSpinner.isSpinning) {
+        loadingSpinner.text = message.join(" ");
+        return;
+    }
+    console.log(...message);
 };
 export default { error, success, warning, fatal, log };

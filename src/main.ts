@@ -2,7 +2,13 @@
 
 import { program } from "commander";
 import { addCommands } from "./commands";
+import { maybeCreateVerdeDirAtHomeDir } from "./storage";
 
-addCommands(program);
+const parseAndRun = async () => {
+    maybeCreateVerdeDirAtHomeDir();
 
-program.parse();
+    addCommands(program);
+    await program.parseAsync();
+};
+
+parseAndRun();

@@ -1,4 +1,8 @@
 {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "cSpell.words": ["octo", "unzipper"]
+    "cSpell.words": [
+        "Cryptr",
+        "octo",
+        "unzipper"
+    ]
 }

@@ -1,4 +1,7 @@
-import { existsSync } from "fs";
-import fs from "fs/promises";
+import fs from "fs-extra";
+import path from "path";
+import os from "os";
 
-fs.exists = existsSync as any;
+if (!fs.existsSync(path.join(os.homedir(), ".verde"))) {
+    await fs.mkdirSync(path.join(os.homedir(), ".verde"));
+}

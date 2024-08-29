@@ -1,38 +1,33 @@
+import axios from "axios";
+import { existsSync } from "fs-extra";
 import { basename, join } from "path";
+import { chunkArr } from "./array";
 import { hashBuffersWithSha256 } from "./crypto";
 import {
     collectDirsWithFile,
-    collectFilePathsIn,
-    find_project_root,
-    isStoredOnDisk,
+    findProjectRoot,
+    projectRoot,
     readFiles,
     readJSON,
     removeDir,
-    storeObjectInCwd,
+    storeJSON
 } from "./fs";
 import logger from "./logger";
 import { CPU_COUNT } from "./os";
-import { push_utility } from "./upload_git_tree";
-import { type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash } from "./utility";
+import { readAnswerTo } from "./prompt";
+import { type UtilityDescription, type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash, utilityConfigFileName } from "./utility";
 
-const configFilename = "utils.json";
-
-type UtilityDescription = {
-    configFile: UtilityFile;
-    path: string;
-    files: string[];
-};
 
 export const listUtilitiesInDirectory = async (projectPath: string): Promise<UtilityDescription[]> => {
     const traverseResult = await collectDirsWithFile(projectPath, {
         exclude: ["node_modules", ".git", "dist"],
-        configFilename: configFilename,
+        configFilename: utilityConfigFileName,
     });
 
     const descArr: UtilityDescription[] = [];
 
     for (const tr of traverseResult) {
-        const configFile = await readJSON<UtilityFile>(join(tr.dirPath, configFilename));
+        const configFile = await readJSON<UtilityFile>(join(tr.dirPath, utilityConfigFileName));
 
         descArr.push({
             configFile,
@@ -44,60 +39,121 @@ export const listUtilitiesInDirectory = async (projectPath: string): Promise<Uti
     return descArr;
 };
 
-export const initNewUtility = async (name: string, description: string) => {
-    if (await isStoredOnDisk(configFilename)) {
-        console.error("directory already managed by verde!.");
-        return;
-    }
-
-    const utils = await listUtilitiesInDirectory(".");
-
-    if (utils.length) {
-        logger.fatal(
-            "this directory contains sub utilities",
-            "\n",
-            utils.map(u => `${u.configFile.name}: ${u.path}`).join("\n"),
-        );
-        return;
-    }
-
-    const nameNotAvailable = utils.some(u => u.configFile.name === name);
-
-    if (nameNotAvailable) {
-        console.error("name taken by a different utility.");
-        return;
-    }
-
-    const paths = await collectFilePathsIn(".");
-
-    const sortedPaths = paths
-        .slice(0)
-        .sort()
-        .filter(p => basename(p) !== configFilename);
-
-    const files = await readFiles(sortedPaths);
-    const hash = hashBuffersWithSha256(files);
-
-    await storeObjectInCwd<UtilityFile>(configFilename, {
-        name,
-        deps: {},
-        private: false,
-        hash,
-        version: "0.1.0",
-        description,
-    });
+type VerdeConfig = {
+    dependencies: Record<string, DependencyDescription>;
+    defaultInstallationPath: string;
+    defaultOrg: string | null;
+    grouping: Array<{
+        prefix: string;
+        installationDestination: string;
+        owner: string;
+    }>;
 };
 
-export const removeUtilityFromProject = async (name: string, projectPath?: string) => {
-    if (!projectPath) {
-        projectPath = await find_project_root();
+export type DependencyDescription = {
+    owner: string;
+    repo: string;
+    version: `${number}.${number}.${number}`;
+    update_policy: "major" | "minor" | "batch" | "fixed";
+};
+
+export type PackageDotJSONFile = {
+    name: string;
+    dependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+    verde: VerdeConfig;
+};
+
+export type ProjectContext = {
+    utilities: UtilityDescription[];
+    utilitiesInCwd: UtilityDescription[];
+    path: string;
+    packageFile: PackageDotJSONFile;
+};
+
+export const selectUtilityByName = (ctx: ProjectContext, name: string): UtilityDescription | undefined =>
+    ctx.utilities.find(u => u.configFile.name === name);
+
+const getDefaultInstallationRelativePath = async () => {
+    let answer = await readAnswerTo("where do you want installations [server/utils]", {
+        type: "input",
+    });
+    if (!answer) {
+        answer = "server/utils";
+    }
+    const directoryFullPath = join(projectRoot, answer);
+    if (!existsSync(directoryFullPath)) {
+        logger.fatal("provided default installation path is not valid and does not exists on the current project");
+    }
+    return answer;
+};
+
+export const getDefaultOrganizationPath = async () => {
+    try {
+        const answer = await readAnswerTo("what is the default Organization/Owner Name to look in");
+        if (!answer.match(/^[0-9a-zA-Z][_\-0-9a-zA-Z]*?$/)) {
+            logger.fatal("Organization/Owner Name Is not Valid");
+        }
+        await axios.get(`https://github.com/${answer}`);
+    } catch (error: any) {
+        if (error?.status == 404) {
+            logger.fatal("Provided Organization Does not exists");
+        }
+        logger.fatal("Error", error);
+        return "";
+    }
+};
+
+export const assembleProjectContext = async (pathOrCwd: string = process.cwd()): Promise<ProjectContext> => {
+    const utilities = await listUtilitiesInDirectory(projectRoot);
+    const utilitiesInCwd = projectRoot === pathOrCwd ? utilities : await listUtilitiesInDirectory(pathOrCwd);
+    const packageFile = readJSON<PackageDotJSONFile>(join(projectRoot, "package.json"));
+    packageFile.verde.grouping = packageFile.verde.grouping.sort((gA, gB)=>{
+        if(gA.prefix.length > gB.prefix.length){
+            return 1
+        } else if(gA.prefix.length < gB.prefix.length){
+            return -1
+        }else{
+            return 0
+        }
+    })
+
+    if (packageFile.verde === undefined) {
+        const verde: VerdeConfig = {
+            defaultInstallationPath: await getDefaultInstallationRelativePath(),
+            dependencies: {},
+            grouping: [],
+            defaultOrg: null,
+        };
+
+        const packageFileWithVerde = {
+            ...packageFile,
+            verde,
+        };
+
+        await storeJSON(join(projectRoot, "package.json"), packageFileWithVerde);
+
+        return {
+            utilities,
+            utilitiesInCwd,
+            path: projectRoot,
+            packageFile: packageFileWithVerde,
+        };
     }
 
-    const utils = await listUtilitiesInDirectory(projectPath);
+    return {
+        utilities,
+        utilitiesInCwd,
+        packageFile,
+        path: projectRoot,
+    };
+};
+export const projectContext = await assembleProjectContext();
 
-    for (const util of utils) {
+export const removeUtilityFromProject = async (context: ProjectContext, name: string) => {
+    for (const util of context.utilities) {
         if (util.configFile.name === name) {
-            console.log("found utility file, deleting...");
+            logger.log("found utility file, deleting...");
             await removeDir(util.path);
             return;
         }
@@ -105,13 +161,13 @@ export const removeUtilityFromProject = async (name: string, projectPath?: strin
 };
 
 export const getUtilityByName = async (name: string): Promise<UtilityDescription | undefined> => {
-    const projectRoot = await find_project_root();
+    const projectRoot = await findProjectRoot();
     const utils = await listUtilitiesInDirectory(projectRoot);
     return utils.find(u => u.configFile.name === name);
 };
 
-export const hideUtilityInProject = async (name: string) => {
-    const util = await getUtilityByName(name);
+export const hideUtilityInProject = async (context: ProjectContext, name: string) => {
+    const util = selectUtilityByName(context, name);
 
     if (!util) {
         console.error(`could not find utility with name ${name}`);
@@ -119,12 +175,12 @@ export const hideUtilityInProject = async (name: string) => {
     }
 
     const nextUtilityFile = markUtilityFileAsPrivate(util.configFile);
-    await storeObjectInCwd<UtilityFile>(join(util.path, configFilename), nextUtilityFile);
+    await storeJSON<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
     console.log("done!");
 };
 
-export const revealUtilityInProject = async (name: string) => {
-    const util = await getUtilityByName(name);
+export const revealUtilityInProject = async (context: ProjectContext, name: string) => {
+    const util = selectUtilityByName(context, name);
 
     if (!util) {
         console.error(`could not find utility with name ${name}`);
@@ -132,13 +188,14 @@ export const revealUtilityInProject = async (name: string) => {
     }
 
     const nextUtilityFile = markUtilityAsPublic(util.configFile);
-    await storeObjectInCwd<UtilityFile>(join(util.path, configFilename), nextUtilityFile);
+    await storeJSON<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
     console.log("done!");
 };
 
-export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
+export const checkUtility = async (context: ProjectContext, nameOrDesc: string | UtilityDescription) => {
     logger.log(`looking for utility "${nameOrDesc}"`);
-    const util = typeof nameOrDesc === "string" ? await getUtilityByName(nameOrDesc) : nameOrDesc;
+
+    const util = typeof nameOrDesc === "string" ? selectUtilityByName(context, nameOrDesc) : nameOrDesc;
 
     if (!util) {
         logger.fatal(`could not find utility with name ${nameOrDesc}`);
@@ -149,14 +206,14 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
 
     const previousHash = util.configFile.hash || "";
 
-    const utilFilePaths = util.files.filter(f => basename(f) !== configFilename);
+    const utilFilePaths = util.files.filter(f => basename(f) !== utilityConfigFileName);
     const files = await readFiles(utilFilePaths);
     const currentHash = hashBuffersWithSha256(files);
 
     if (previousHash !== currentHash) {
         console.log(`${util.configFile.name} hash mismatch, updating on disk config file...`);
-        await storeObjectInCwd<UtilityFile>(
-            join(util.path, configFilename),
+        await storeJSON<UtilityFile>(
+            join(util.path, utilityConfigFileName),
             updateUtilityHash(util.configFile, currentHash),
         );
         return {
@@ -170,43 +227,19 @@ export const checkUtility = async (nameOrDesc: string | UtilityDescription) => {
     return {
         currentHash,
         previousHash,
-        match: currentHash == previousHash,
+        match: currentHash === previousHash,
     };
 };
-export const chunkArr = <T>(arr: T[], chunkSize: number): T[][] => {
-    let result: T[][] = [];
-    let currentChunk: T[] = [];
 
-    for (const item of arr) {
-        currentChunk.push(item);
-
-        if (currentChunk.length === chunkSize) {
-            result = [...result, currentChunk];
-            currentChunk = [];
-        }
-    }
-
-    if (currentChunk.length) {
-        result = [...result, currentChunk];
-    }
-
-    return result;
-};
-
-export const checkAllUtilities = async () => {
-    const utilities = await listUtilitiesInDirectory(await find_project_root());
+export const checkAllUtilities = async (context: ProjectContext) => {
+    const { utilities } = context;
     const chunked = chunkArr(utilities, CPU_COUNT * 2);
 
     for (const chunk of chunked) {
-        await Promise.all(chunk.map(c => checkUtility(c)));
+        await Promise.all(chunk.map(c => checkUtility(context, c)));
     }
 };
-
-export const pushAllUtilities = async () => {
-    const utilities = await listUtilitiesInDirectory(await find_project_root());
-    const chunked = chunkArr(utilities, CPU_COUNT * 2);
-
-    for (const chunk of chunked) {
-        await Promise.all(chunk.map(c => push_utility(c.configFile.name)));
-    }
+export const addConfigToProjectPackageFile = async (context: ProjectContext) => {
+    await storeJSON<PackageDotJSONFile>(join(context.path, "package.json"), context.packageFile);
+    logger.log("Your verde config: \n", JSON.stringify(context.packageFile.verde, undefined, 4));
 };

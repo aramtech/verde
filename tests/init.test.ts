@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { randomInt } from "crypto";
 import path from "path";
-import { readJSON, storeObjectInCwd } from "../src/fs";
+import { readJSON, storeJSON } from "../src/fs";
 import { type UtilityFile } from "../src/utility";
 
 describe("init", () => {
@@ -35,7 +35,7 @@ describe("init", () => {
     test("init command: should initialize a package at the cwd.", async () => {
         await moveToTestDir();
 
-        await storeObjectInCwd("package.json", {
+        await storeJSON("package.json", {
             name: "foo",
             version: "0.1.0",
         });
@@ -54,7 +54,7 @@ describe("init", () => {
     test("init command: package already exists in the current dir.", async () => {
         await moveToTestDir();
 
-        await storeObjectInCwd("package.json", {
+        await storeJSON("package.json", {
             name: "foo",
             version: "0.1.0",
         });

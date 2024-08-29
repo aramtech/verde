@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import logger from "./logger";
+import { projectContext } from "./project";
 
 export type CollectOpts = {
     configFilename: string;
@@ -68,28 +69,35 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
     return results;
 };
 
-export const readFiles = async (paths: string[]) => await Promise.all(paths.map(f => fs.readFileSync(f)));
+export const readFiles = async (paths: string[]) => await Promise.all(paths.map(f => fs.readFileSync(f, "utf-8")));
 
-export const storeObjectInCwd = async <T>(nameOrPath: string, object: T) =>
-    await fs.writeFileSync(nameOrPath, JSON.stringify(object, null, 4));
+export const storeJSON = async <T>(nameOrPath: string, object: T) =>
+    fs.writeFileSync(nameOrPath, JSON.stringify(object, null, 4));
 
-export const isStoredOnDisk = async (nameOrPath: string) => await fs.existsSync(nameOrPath);
+export const isStoredOnDisk = async (nameOrPath: string) => fs.existsSync(nameOrPath);
 
-export const readJSON = async <T>(path: string) => {
-    const contents = await fs.readFileSync(path);
-    return JSON.parse(contents.toString("utf-8")) as T;
+export const readJSON = <T>(path: string) => {
+    const contents = fs.readFileSync(path, "utf-8");
+    return JSON.parse(contents) as T;
 };
 
 export async function is_valid_relative_path(path: string) {
     return !!path.match(/^(?:[_a-zA-Z\-][_a-zA-Z0-9\-]*)(?:\/[_a-zA-Z\-][_a-zA-Z0-9\-]*)*\/?$/);
 }
 
+export const updatePackageDotJson = () => {
+    return fs.writeFileSync(
+        path.join(projectRoot, "package.json"),
+        JSON.stringify(projectContext.packageFile, null, 4),
+    );
+};
+
 export const removeDir = async (p: string) => fs.rmdirSync(p, { recursive: true });
 
-export async function find_project_root(currentDir = path.resolve(".")) {
+export const findProjectRoot = async (currentDir = path.resolve(".")): Promise<string> => {
     const packagePath = path.join(currentDir, "package.json");
 
-    if (await fs.existsSync(packagePath)) {
+    if (fs.existsSync(packagePath)) {
         return currentDir;
     }
 
@@ -99,5 +107,6 @@ export async function find_project_root(currentDir = path.resolve(".")) {
         logger.fatal("No package.json file found in any parent directory.");
     }
 
-    return find_project_root(parentDir);
-}
+    return findProjectRoot(parentDir);
+};
+export const projectRoot = await findProjectRoot();
