@@ -28,8 +28,7 @@ export const get_token_for_repo = async (repo_name: string) => {
             "Please provide your classic personal github access token (you can create one at https://github.com/settings/tokens)\n\n Token:",
         );
 
-        loadingSpinner.text = "Verifying Token...";
-        loadingSpinner.start();
+        logger.log("Verifying Token...");
 
         try {
             await axios({
@@ -40,7 +39,6 @@ export const get_token_for_repo = async (repo_name: string) => {
                     "X-GitHub-Api-Version": "2022-11-28",
                 },
             });
-            loadingSpinner.clear();
 
             break;
         } catch (error: any) {
@@ -51,7 +49,6 @@ export const get_token_for_repo = async (repo_name: string) => {
                 logger.error("repository does not exist");
             }
             Logger.error("\nInvalid Github Access Token, Please Make sure that the token is valid.\n");
-            loadingSpinner.clear();
             continue;
         }
     }
@@ -145,13 +142,13 @@ export async function create_repository_in_org(org: string, repo: string, public
                 visibility: public_repo ? "public" : "private", // Set to true if you want to create a private repository
                 auto_init: true,
             });
-            loadingSpinner.clear();
+            loadingSpinner.stop();
 
             Logger.success("Repository created successfully in the organization:", response.data?.html_url);
         } catch (error) {
             Logger.fatal("Error creating repository:", error);
         }
-        loadingSpinner.clear();
+        loadingSpinner.stop();
     }
 }
 

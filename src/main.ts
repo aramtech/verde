@@ -11,4 +11,5 @@ const parseAndRun = async () => {
     await program.parseAsync();
 };
 
-parseAndRun();
+await parseAndRun();
+process.exit()

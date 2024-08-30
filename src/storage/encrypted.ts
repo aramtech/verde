@@ -1,19 +1,19 @@
 import fs from "fs-extra";
-import { decryptBufferWithPassword, encryptBufferWithPassword } from "../crypto";
-import { nameToPath } from "./index";
+import { decryptStringWithPassword, encryptStringWithPassword } from "../crypto";
 import Logger from "../logger";
+import { fileNameToPath } from "./index";
 
-export const encryptAndSaveFileToStorage = async (name: string, contents: Buffer, password: string) => {
-    const encrypted = encryptBufferWithPassword(contents, password);
+export const encryptAndSaveFileToStorage = async (name: string, contents: string, password: string) => {
+    const encrypted = encryptStringWithPassword(contents, password);
     const prefixedName = `encrypted-${name}`;
-    const path = nameToPath(prefixedName);
+    const path = fileNameToPath(prefixedName);
 
     await fs.writeFile(path, encrypted);
 };
 
 export const retrieveEncryptedFileFromStorage = async (name: string, password: string) => {
     const prefixedName = `encrypted-${name}`;
-    const path = nameToPath(prefixedName);
+    const path = fileNameToPath(prefixedName);
 
     const fileDoesNotExist = !(await fs.exists(path));
 
@@ -22,8 +22,8 @@ export const retrieveEncryptedFileFromStorage = async (name: string, password: s
     }
 
     try {
-        const encryptedContents = await fs.readFile(path);
-        return Buffer.from(decryptBufferWithPassword(encryptedContents, password));
+        const encryptedContents = await fs.readFile(path, "utf-8");
+        return decryptStringWithPassword(encryptedContents, password);
     } catch (err) {
         Logger.error("failed to decrypt file: ", name, ":", err);
         return null;
@@ -32,7 +32,7 @@ export const retrieveEncryptedFileFromStorage = async (name: string, password: s
 
 export const isStoredAsEncrypted = async (name: string) => {
     const prefixedName = `encrypted-${name}`;
-    const path = nameToPath(prefixedName);
+    const path = fileNameToPath(prefixedName);
 
     return await fs.exists(path);
 };

@@ -7,6 +7,7 @@
         "test": "vitest"
     },
     "devDependencies": {
+        "@types/async-lock": "^1.4.2",
         "@types/bun": "latest",
         "@types/fs-extra": "^11.0.4",
         "@types/unzipper": "^0.10.10",
@@ -30,6 +31,7 @@
     },
     "dependencies": {
         "@octokit/rest": "^21.0.2",
+        "async-lock": "^1.4.1",
         "axios": "^1.7.4",
         "commander": "^12.1.0",
         "cryptr": "^6.3.0",

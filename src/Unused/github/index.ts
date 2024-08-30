@@ -293,11 +293,11 @@ export async function upload_directory_to_repo(
         const filesToUpload: string[] = [];
 
         const files = await collectFilePathsIn(localDir);
-        console.log("going to upload files", files);
+        logger.log("going to upload files", files);
         let promises = [] as any[];
         for (const file of files) {
             const repoItemPath = file.slice(localDir.length + 1).replace(/\\/g, "/"); // Ensure repo path is Unix-style
-            console.log("uploading file", {
+            logger.log("uploading file", {
                 file,
                 localDir,
                 owner,
@@ -314,7 +314,7 @@ export async function upload_directory_to_repo(
 
         const existingFiles = await list_files_in_repo(owner, repo, branch, repoPath);
         const filesToDelete = existingFiles.filter(file => !filesToUpload.includes(file));
-        console.log("files to delete", filesToDelete);
+        logger.log("files to delete", filesToDelete);
         const deletePromises = filesToDelete.map(file => delete_file_from_repo(owner, repo, file, branch));
         await Promise.all(deletePromises);
     } catch (error) {
@@ -390,7 +390,7 @@ const download_repo_files = async (
 
             writer.on("close", () => {
                 if (!error) {
-                    loadingSpinner.clear();
+                    loadingSpinner.stop();
                     run_command(`tar -xf ${tar_full_path} -C ${new_project_full_path}`, {
                         stdio: "inherit",
                         encoding: "utf-8",

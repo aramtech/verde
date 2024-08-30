@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import logger from "./logger";
-import { projectContext } from "./project";
 
 export type CollectOpts = {
     configFilename: string;
@@ -85,16 +84,9 @@ export async function is_valid_relative_path(path: string) {
     return !!path.match(/^(?:[_a-zA-Z\-][_a-zA-Z0-9\-]*)(?:\/[_a-zA-Z\-][_a-zA-Z0-9\-]*)*\/?$/);
 }
 
-export const updatePackageDotJson = () => {
-    return fs.writeFileSync(
-        path.join(projectRoot, "package.json"),
-        JSON.stringify(projectContext.packageFile, null, 4),
-    );
-};
-
 export const removeDir = async (p: string) => fs.rmdirSync(p, { recursive: true });
 
-export const findProjectRoot = async (currentDir = path.resolve(".")): Promise<string> => {
+const findProjectRoot = async (currentDir = path.resolve(".")): Promise<string> => {
     const packagePath = path.join(currentDir, "package.json");
 
     if (fs.existsSync(packagePath)) {
@@ -110,3 +102,5 @@ export const findProjectRoot = async (currentDir = path.resolve(".")): Promise<s
     return findProjectRoot(parentDir);
 };
 export const projectRoot = await findProjectRoot();
+logger.log("current project root", projectRoot)
+export { findProjectRoot };

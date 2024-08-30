@@ -1,11 +1,11 @@
 import type { Command } from "commander";
 import { deleteBranchOnFailure, get_utility_versions } from "./github";
-import { getUtilityByName, projectContext } from "./project";
+import { getUtilityByName, projectContext, updatePackageDotJson } from "./project";
 
 import { clearCachedItems, listCachedItems } from "./cache";
-import { updatePackageDotJson } from "./fs";
+
 import { initNewUtility } from "./init";
-import logger from "./logger";
+import logger, { loadingSpinner } from "./logger";
 import {
     addConfigToProjectPackageFile,
     checkAllUtilities,
@@ -52,6 +52,8 @@ const addRemoveUtilityCommand = (program: Command) =>
 
 const addPushUtilityCommand = (program: Command) =>
     program.command("push [name]").action(async (utility_name?: string) => {
+        loadingSpinner.start()
+
         if (utility_name) {
             logger.log("pushing single");
             await push_utility({
@@ -59,12 +61,14 @@ const addPushUtilityCommand = (program: Command) =>
                 input_utility_name: utility_name, 
                 main_dep: true, 
             });
-            updatePackageDotJson() 
+            updatePackageDotJson()
+            loadingSpinner.stop();  
             return;
         }
 
         await pushAllUtilities(context);
         updatePackageDotJson() 
+        loadingSpinner.stop();  
     });
 
 const addHideCommand = (program: Command) =>

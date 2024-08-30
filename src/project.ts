@@ -1,9 +1,14 @@
 import axios from "axios";
+import fs from "fs";
 import { existsSync } from "fs-extra";
-import { basename, join } from "path";
+import path, { basename, join } from "path";
 import { chunkArr } from "./array";
 import { hashBuffersWithSha256 } from "./crypto";
-import {
+import logger from "./logger";
+import { CPU_COUNT } from "./os";
+import { readAnswerTo } from "./prompt";
+import { type UtilityDescription, type UtilityFile } from "./utility";
+const {
     collectDirsWithFile,
     findProjectRoot,
     projectRoot,
@@ -11,11 +16,24 @@ import {
     readJSON,
     removeDir,
     storeJSON
-} from "./fs";
-import logger from "./logger";
-import { CPU_COUNT } from "./os";
-import { readAnswerTo } from "./prompt";
-import { type UtilityDescription, type UtilityFile, markUtilityAsPublic, markUtilityFileAsPrivate, updateUtilityHash, utilityConfigFileName } from "./utility";
+} = (await import("./fs"));
+
+
+export const utilityConfigFileName = "utils.json";
+
+export const updatePackageDotJson = () => {
+    return fs.writeFileSync(
+        path.join(projectRoot, "package.json"),
+        JSON.stringify(projectContext.packageFile, null, 4),
+    );
+};
+
+export const updateUtilityHash = (f: UtilityFile, nextHash: string): UtilityFile => ({ ...f, hash: nextHash });
+
+
+export const markUtilityFileAsPrivate = (f: UtilityFile): UtilityFile => ({ ...f, private: true });
+
+export const markUtilityAsPublic = (f: UtilityFile): UtilityFile => ({ ...f, private: false });
 
 
 export const listUtilitiesInDirectory = async (projectPath: string): Promise<UtilityDescription[]> => {
@@ -105,18 +123,18 @@ export const getDefaultOrganizationPath = async () => {
 };
 
 export const assembleProjectContext = async (pathOrCwd: string = process.cwd()): Promise<ProjectContext> => {
+    logger.log("assembling project context...", projectRoot)
+    
+    logger.log("listing all utilities");
     const utilities = await listUtilitiesInDirectory(projectRoot);
+ 
+    logger.log("listing utilities in current directory")
     const utilitiesInCwd = projectRoot === pathOrCwd ? utilities : await listUtilitiesInDirectory(pathOrCwd);
+    
+    logger.log("loading package.json")
     const packageFile = readJSON<PackageDotJSONFile>(join(projectRoot, "package.json"));
-    packageFile.verde.grouping = packageFile.verde.grouping.sort((gA, gB)=>{
-        if(gA.prefix.length > gB.prefix.length){
-            return 1
-        } else if(gA.prefix.length < gB.prefix.length){
-            return -1
-        }else{
-            return 0
-        }
-    })
+    
+    
 
     if (packageFile.verde === undefined) {
         const verde: VerdeConfig = {
@@ -133,6 +151,8 @@ export const assembleProjectContext = async (pathOrCwd: string = process.cwd()):
 
         await storeJSON(join(projectRoot, "package.json"), packageFileWithVerde);
 
+
+        
         return {
             utilities,
             utilitiesInCwd,
@@ -140,6 +160,16 @@ export const assembleProjectContext = async (pathOrCwd: string = process.cwd()):
             packageFile: packageFileWithVerde,
         };
     }
+    logger.log("sorting dependencies")
+    packageFile.verde.grouping = packageFile.verde.grouping.sort((gA, gB)=>{
+        if(gA.prefix.length > gB.prefix.length){
+            return 1
+        } else if(gA.prefix.length < gB.prefix.length){
+            return -1
+        }else{
+            return 0
+        }
+    })
 
     return {
         utilities,
@@ -176,7 +206,7 @@ export const hideUtilityInProject = async (context: ProjectContext, name: string
 
     const nextUtilityFile = markUtilityFileAsPrivate(util.configFile);
     await storeJSON<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
-    console.log("done!");
+    logger.log("done!");
 };
 
 export const revealUtilityInProject = async (context: ProjectContext, name: string) => {
@@ -189,7 +219,7 @@ export const revealUtilityInProject = async (context: ProjectContext, name: stri
 
     const nextUtilityFile = markUtilityAsPublic(util.configFile);
     await storeJSON<UtilityFile>(join(util.path, utilityConfigFileName), nextUtilityFile);
-    console.log("done!");
+    logger.log("done!");
 };
 
 export const checkUtility = async (context: ProjectContext, nameOrDesc: string | UtilityDescription) => {
@@ -202,7 +232,7 @@ export const checkUtility = async (context: ProjectContext, nameOrDesc: string |
         process.exit(1);
     }
 
-    console.log(`found utility "${util.configFile.name}" computing it's file hash...`);
+    logger.log(`found utility "${util.configFile.name}" computing it's file hash...`);
 
     const previousHash = util.configFile.hash || "";
 
@@ -211,7 +241,7 @@ export const checkUtility = async (context: ProjectContext, nameOrDesc: string |
     const currentHash = hashBuffersWithSha256(files);
 
     if (previousHash !== currentHash) {
-        console.log(`${util.configFile.name} hash mismatch, updating on disk config file...`);
+        logger.log(`${util.configFile.name} hash mismatch, updating on disk config file...`);
         await storeJSON<UtilityFile>(
             join(util.path, utilityConfigFileName),
             updateUtilityHash(util.configFile, currentHash),
@@ -222,7 +252,7 @@ export const checkUtility = async (context: ProjectContext, nameOrDesc: string |
             match: currentHash == previousHash,
         };
     }
-    console.log(`utility "${util.configFile.name}" hash match!. no changes detected`);
+    logger.log(`utility "${util.configFile.name}" hash match!. no changes detected`);
 
     return {
         currentHash,

@@ -1,7 +1,8 @@
 import { execSync, type ExecSyncOptionsWithStringEncoding } from "child_process";
+import logger from "./logger";
 
 const run_command = (command: string, opts?: ExecSyncOptionsWithStringEncoding | undefined) => {
-    console.log("about to run command", command);
+    logger.log("about to run command", command);
     return execSync(
         command,
         opts || {

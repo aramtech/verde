@@ -3,16 +3,19 @@ import { org_name_to_api_link } from "./github";
 import logger, { loadingSpinner } from "./logger";
 import { readAnswerTo, requestPermsToRun } from "./prompt";
 import { encryptAndSaveFileToStorage, isStoredAsEncrypted, retrieveEncryptedFileFromStorage } from "./storage";
+import { lock_method } from "./sync";
 
 const tokens_cache_file_name = "tokens.json";
 let password: null | string = null;
-const read_tokens_password = async () => {
+const read_tokens_password = lock_method(async () => {
     if (password) {
         return password;
     }
     password = await readAnswerTo("please enter password for your tokens cache");
     return password;
-};
+}, {
+    lock_name: "read_tokens_password"
+});
 
 const create_tokens_cache_file_if_it_does_not_exist = async () => {
     const password = await read_tokens_password();
@@ -51,7 +54,7 @@ const store_token_in_storage = async (owner: string, token: string) => {
         tokens_cache_file_name,
         JSON.stringify({
             ...stored_tokens,
-            owner: token,
+            [owner]: token,
         }),
         await read_tokens_password(),
     );
@@ -59,12 +62,12 @@ const store_token_in_storage = async (owner: string, token: string) => {
 
 export const get_token_for_org = async (org_name: string) => {
     let github_personal_access_token = "";
-
+    
     let try_count = 0;
 
     while (true) {
         try_count += 1;
-        if (try_count >= 3) {
+        if (try_count > 3) {
             logger.fatal("Maximum try count exceeded");
         }
 
@@ -72,7 +75,7 @@ export const get_token_for_org = async (org_name: string) => {
             "Please provide your classic personal github access token (you can create one at https://github.com/settings/tokens)\n\n Token:",
         );
 
-        loadingSpinner.text = "Verifying Token...";
+        loadingSpinner.text = "Verifying Token for owner: "+org_name+"...";
         loadingSpinner.start();
 
         try {
@@ -84,7 +87,7 @@ export const get_token_for_org = async (org_name: string) => {
                     "X-GitHub-Api-Version": "2022-11-28",
                 },
             });
-            loadingSpinner.clear();
+            loadingSpinner.stop();
 
             break;
         } catch (error: any) {
@@ -94,8 +97,8 @@ export const get_token_for_org = async (org_name: string) => {
             if (error?.status == 404) {
                 logger.fatal("organization does not exist");
             }
-            logger.error("\nInvalid Github Access Token, Please Make sure that the token is valid.\n");
-            loadingSpinner.clear();
+            logger.error("\nInvalid Github Access Token, Please Make sure that the token is valid.\n" ,error);
+            loadingSpinner.stop();
             continue;
         }
     }
@@ -105,7 +108,7 @@ export const get_token_for_org = async (org_name: string) => {
 let cached_record: {
     [owner: string]: string; // token
 } = {};
-export const get_token = async (owner: string) => {
+export const get_token = lock_method(async (owner: string) => {
     if (cached_record[owner]) {
         return cached_record[owner];
     }
@@ -124,6 +127,10 @@ export const get_token = async (owner: string) => {
     if (await requestPermsToRun("would you like to store token and organization name")) {
         await store_token_in_storage(owner, token);
     }
+    cached_record[owner] = token;
+
     return token;
-};
+}, {
+    lock_name: "get_token"
+});
 

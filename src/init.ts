@@ -2,9 +2,9 @@ import path from "path";
 import { hashBuffersWithSha256 } from "./crypto";
 import { collectFilePathsIn, isStoredOnDisk, readFiles, storeJSON } from "./fs";
 import logger from "./logger";
-import { projectContext } from "./project";
+import { projectContext, utilityConfigFileName } from "./project";
 import { requestPermsToRun } from "./prompt";
-import { process_utility_identifier_input, utilityConfigFileName, type UtilityFile } from "./utility";
+import { process_utility_identifier_input, type UtilityFile } from "./utility";
 
 export const initNewUtility = async (name: string, description: string) => {
     const context = projectContext;

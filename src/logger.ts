@@ -13,6 +13,7 @@ const colors = {
 };
 
 export const loadingSpinner = ora();
+loadingSpinner.start()
 const color_text = (
     color: "black" | "red" | "green" | "yellow" | "blue" | "magenta" | "cyan" | "white" | "console_color",
     ...text: any[]
@@ -22,9 +23,9 @@ const color_text = (
 
 const spin_wrapper = <T>(cp: (...args: any[]) => T): T => {
     if (loadingSpinner.isSpinning) {
-        loadingSpinner.clear();
+        loadingSpinner.stop();
         const res = cp();
-        loadingSpinner.clear();
+        loadingSpinner.start();
         return res;
     }
     return cp();
@@ -55,8 +56,10 @@ export const fatal = (...message: any[]): never => {
     });
 };
 export const log = (...message: any[]) => {
-    if (loadingSpinner.isSpinning) {
-        loadingSpinner.text = message.join(" ");
+    if (loadingSpinner.isSpinning) {   
+        // loadingSpinner.stop()
+        loadingSpinner.text = message.join(" ");        
+        // loadingSpinner.start()
         return;
     }
     console.log(...message);

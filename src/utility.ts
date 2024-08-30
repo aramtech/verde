@@ -3,7 +3,7 @@ import path from "path";
 import { projectRoot } from "./fs";
 import logger from "./logger";
 import { get_default_owner, read_owner_name } from "./owner";
-import { projectContext, selectUtilityByName, type DependencyDescription, type ProjectContext } from "./project";
+import { projectContext, selectUtilityByName, utilityConfigFileName, type DependencyDescription, type ProjectContext } from "./project";
 import { readAnswerTo, requestPermsToRun } from "./prompt";
 import { owner_utility_match_regex, utility_name_validation_regex, utility_version_validation_regex } from "./regex";
 
@@ -100,11 +100,6 @@ export const isUtilityNameValid = (name: string) => {
     return name.match(utility_name_validation_regex);
 };
 
-export const markUtilityFileAsPrivate = (f: UtilityFile): UtilityFile => ({ ...f, private: true });
-
-export const markUtilityAsPublic = (f: UtilityFile): UtilityFile => ({ ...f, private: false });
-
-export const updateUtilityHash = (f: UtilityFile, nextHash: string): UtilityFile => ({ ...f, hash: nextHash });
 
 export const parseVersionOrExit = (v: string): Version => {
     const parsed = parseUtilityVersion(v);
@@ -113,8 +108,6 @@ export const parseVersionOrExit = (v: string): Version => {
     }
     return parsed as Version;
 };
-
-export const utilityConfigFileName = "utils.json";
 
 export type UtilityDescription = {
     configFile: UtilityFile;
@@ -131,6 +124,7 @@ const processed_utility_identifier_inputs: {
     }
 } = {}
 export const process_utility_identifier_input = async (input: string) => {
+    
     if(processed_utility_identifier_inputs[input]){
         return processed_utility_identifier_inputs[input]
     }
@@ -139,7 +133,7 @@ export const process_utility_identifier_input = async (input: string) => {
     let utility_exists_on_project: boolean = false;
     let utility_current_owner_different_from_provided: boolean = false;
     const owner_and_repo_match = input.match(owner_utility_match_regex);
-    let specified_owner = false; 
+    let specified_owner = false;
     if (owner_and_repo_match) {
         owner = owner_and_repo_match[1];
         repo = owner_and_repo_match[2];
@@ -164,6 +158,9 @@ export const process_utility_identifier_input = async (input: string) => {
         const utility = selectUtilityByName(projectContext, repo);
         if (utility) {
             owner = utility.configFile.owner;
+            if(!owner){
+                logger.fatal("utility ", utility.configFile.name, " has no specified owner.", "please go to ", path.join(utility.path, utilityConfigFileName), "and add owner")
+            }
             utility_exists_on_project = true;
         } else {
             const default_owner = get_default_owner();
