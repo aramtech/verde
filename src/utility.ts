@@ -208,7 +208,7 @@ export const process_utility_identifier_input = async (input: string) => {
 
     const group = projectContext.packageFile.verde.grouping.find(g=>repo.startsWith(g.prefix))
     if(utility){
-        utility_parent_dir_relative_path = path.dirname(utility.path)
+        utility_parent_dir_relative_path = path.dirname(utility.path).slice(projectRoot.length)
         utility_dir_name = path.basename(utility.path)
     }else{
         if(group){

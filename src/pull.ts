@@ -157,6 +157,7 @@ export const pull_utility = async ({
                     return v.major <= target_version.major;
                 })
                 .at(-1) || versions.at(-1)) as Version;
+
             selected_version = latest_minor_version;
         } else if (update_policy == "batch") {
             const last_batch_version = (versions
