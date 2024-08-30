@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "fs-extra";
 import path from "path";
 import { projectRoot } from "./fs";
+import { get_file_from_repo, type SingleGithubFile } from "./github";
 import logger from "./logger";
 import { get_default_owner, read_owner_name } from "./owner";
 import { projectContext, selectUtilityByName, utilityConfigFileName, type DependencyDescription, type ProjectContext } from "./project";
@@ -16,6 +17,28 @@ export type UtilityFile = { name: string } & {
     description: string;
     owner: string;
 };
+
+export const get_remote_version_config_file = async (owner: string, repo: string, version: string)=>{
+    const last_remote_config_file = (await get_file_from_repo(
+        owner,
+        repo,
+        utilityConfigFileName,
+        version,
+    )) as SingleGithubFile | null;
+    if (!last_remote_config_file) {
+        logger.error("Error loading utility config file from remote source for utility (file not found)", {
+            version: version,
+            owner: owner,
+            repo: repo,
+        });
+        return null; 
+    } else {
+        const remote_util_config: UtilityFile = JSON.parse(
+            Buffer.from(last_remote_config_file.content, "base64").toString("utf-8"),
+        );
+        return remote_util_config
+    }
+}
 
 export const parseUtilityFileFromBuffer = (buff: Buffer) => {
     const parsed = JSON.parse(buff.toString("utf-8"));

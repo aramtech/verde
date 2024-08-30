@@ -169,7 +169,13 @@ export async function list_branches(owner: string, repo: string, kill = false) {
     }
 }
 
-export async function get_utility_versions(owner: string, utility: string) {
+const cachedVersions: {
+    [utility: string]: Version[];
+} = {};
+export async function get_utility_versions(owner: string, utility: string, use_cache = false) {
+    if (cachedVersions[utility] && use_cache) {
+        return cachedVersions[utility];
+    }
     const branches = await list_branches(owner, utility);
     if (branches) {
         const versions_branches = branches
@@ -187,8 +193,10 @@ export async function get_utility_versions(owner: string, utility: string) {
 
                 return 0;
             });
+        cachedVersions[utility] = versions_branches;
         return versions_branches;
     }
+    cachedVersions[utility] = [];
     return [];
 }
 

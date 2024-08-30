@@ -6,13 +6,14 @@ import logger from "./logger";
 import { CPU_COUNT } from "./os";
 import {
     assembleProjectContext,
+    checkUtility,
     getUtilityByName,
     projectContext,
     selectUtilityByName,
     type DependencyDescription,
     type ProjectContext
 } from "./project";
-import { collect_dependencies_list, compareVersions, parseVersionOrExit, process_utility_identifier_input, type Version } from "./utility";
+import { collect_dependencies_list, compareVersions, get_remote_version_config_file, parseVersionOrExit, process_utility_identifier_input, type Version } from "./utility";
 
 export const process_dependencies = async (
     deps: { [utility_name: string]: DependencyDescription },
@@ -189,11 +190,34 @@ export const pull_all_utilities = async ({ keep_excess_utilities = false }: { ke
     if (!keep_excess_utilities) {
         const updated_context = await assembleProjectContext();
         const all_dependencies = await collect_dependencies_list(updated_context, main_dependencies);
-        const to_be_removed = updated_context.utilities.filter(u => {
+        const excess = updated_context.utilities.filter(u => {
             return !all_dependencies[u.configFile.name];
         });
-        for (const util of to_be_removed) {
-            rmSync(util.path, { recursive: true });
+        const chunked_excess = chunkArr(excess, CPU_COUNT*4)
+        for(const excess_chunk of chunked_excess){
+            await Promise.all(excess_chunk.map(async (util)=>{    
+                const versions = await get_utility_versions(util.configFile.owner, util.configFile.name, true)
+                const found_version = versions.find(v=>v.version == util.configFile.version); 
+                if(!found_version){
+                    logger.warning("Utility", util.configFile.owner+"/"+util.configFile.name, "is not registered on main dependencies, and its current version does not exists remotely, please push to register it, or remove it manually.")
+                    return 
+                }
+                if(found_version){
+                    const remote_config = await get_remote_version_config_file(util.configFile.owner, util.configFile.name, found_version.version)
+                    if(!remote_config){
+                        logger.warning("Utility", util.configFile.owner+"/"+util.configFile.name, " version", found_version.version," is not registered on main dependencies but", "has corrupt remote origin,  since its config file not found, to fix please push or fix it manually.")
+                        return
+                    }
+
+                    const check_result = await checkUtility(projectContext, util.configFile.name)
+                    if(remote_config.hash != check_result.currentHash){
+                        logger.warning("Utility", util.configFile.owner+"/"+util.configFile.name, " version", found_version.version," is not registered on main dependencies, ", "its remote config hash does not match current hash, did you forgot to update its version and pushing after editing it?")
+                        return 
+                    }
+                }
+                logger.success("removing excess utility", util.configFile.owner+"/"+util.configFile.name, "at", util.path)
+                rmSync(util.path, { recursive: true });
+            }))  
         }
     }
 };
