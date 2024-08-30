@@ -83,7 +83,7 @@ export const pull_utility = async ({
         utility_parent_dir_relative_path,
     } = await process_utility_identifier_input(input_utility_name);
 
-    const versions = await get_utility_versions(owner, repo);
+    const versions = await get_utility_versions(owner, repo, true);
     if (!versions.length || !versions.at(-1)) {
         logger.fatal("Remote Utility is not detected, and have no versions");
         return;

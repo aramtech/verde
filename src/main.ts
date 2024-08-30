@@ -2,6 +2,7 @@
 
 import { program } from "commander";
 import { addCommands } from "./commands";
+import { loadingSpinner } from "./logger";
 import { maybeCreateVerdeDirAtHomeDir } from "./storage";
 
 const parseAndRun = async () => {
@@ -9,6 +10,8 @@ const parseAndRun = async () => {
 
     addCommands(program);
     await program.parseAsync();
+    loadingSpinner.stop()
+    console.log("\n\n")
 };
 
 await parseAndRun();
