@@ -63,7 +63,7 @@ type VerdeConfig = {
     defaultOrg: string | null;
     grouping: Array<{
         prefix: string;
-        removePrefixOnPull: string;
+        removePrefixOnPull: boolean;
         installationDestination: string;
         owner: string;
     }>;
