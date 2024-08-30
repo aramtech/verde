@@ -81,6 +81,7 @@ export const pull_utility = async ({
         utility_current_owner_different_from_provided,
         utility_exists_on_project,
         utility_parent_dir_relative_path,
+        utility_dir_name
     } = await process_utility_identifier_input(input_utility_name);
 
     const versions = await get_utility_versions(owner, repo, true);
@@ -103,7 +104,7 @@ export const pull_utility = async ({
         };
     };
     const pull = async (selected_version: Version) => {
-        await download_utility(owner, utility_name, selected_version.version, utility_parent_dir_relative_path);
+        await download_utility(owner, utility_name, selected_version.version, utility_parent_dir_relative_path, utility_dir_name);
         const utility = await getUtilityByName(utility_name);
         if (utility) {
             await process_dependencies(utility.configFile.deps, false);

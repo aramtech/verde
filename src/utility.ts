@@ -144,6 +144,7 @@ const processed_utility_identifier_inputs: {
         utility_current_owner_different_from_provided: boolean;
         utility_exists_on_project: boolean;
         utility_parent_dir_relative_path: string; 
+        utility_dir_name: string; 
     }
 } = {}
 export const process_utility_identifier_input = async (input: string) => {
@@ -201,18 +202,32 @@ export const process_utility_identifier_input = async (input: string) => {
         process.exit(1);
     }
     let utility_parent_dir_relative_path: string; 
+    let utility_dir_name: string;
+
+    const utility = selectUtilityByName(projectContext, repo);
 
     const group = projectContext.packageFile.verde.grouping.find(g=>repo.startsWith(g.prefix))
-    if(group){
-        if(!specified_owner){
-            owner = group.owner
-        }
-        utility_parent_dir_relative_path = group.installationDestination
+    if(utility){
+        utility_parent_dir_relative_path = path.dirname(utility.path)
+        utility_dir_name = path.basename(utility.path)
     }else{
-        if(projectContext.packageFile.verde.defaultInstallationPath){
-            utility_parent_dir_relative_path = projectContext.packageFile.verde.defaultInstallationPath
+        if(group){
+            if(!specified_owner){
+                owner = group.owner
+            }
+            utility_parent_dir_relative_path = group.installationDestination
+            if(group.removePrefixOnPull){
+                utility_dir_name = repo.slice(group.prefix.length)
+            }else{
+                utility_dir_name = repo
+            }
         }else{
-            utility_parent_dir_relative_path = await read_installation_path()
+            if(projectContext.packageFile.verde.defaultInstallationPath){
+                utility_parent_dir_relative_path = projectContext.packageFile.verde.defaultInstallationPath
+            }else{
+                utility_parent_dir_relative_path = await read_installation_path()
+            }
+            utility_dir_name = repo
         }
     }
         
@@ -225,7 +240,7 @@ export const process_utility_identifier_input = async (input: string) => {
         logger.fatal("Specified Installation path is not a directory")
     }
 
-    const result =  { owner, repo ,utility_current_owner_different_from_provided, utility_exists_on_project,utility_parent_dir_relative_path  };
+    const result =  { owner, repo ,utility_current_owner_different_from_provided, utility_exists_on_project,utility_parent_dir_relative_path, utility_dir_name };
     processed_utility_identifier_inputs[input] = result; 
     return result; 
 };
