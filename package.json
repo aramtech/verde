@@ -1,5 +1,6 @@
 {
-    "name": "verde",
+    "name": "@aramtech/verde",
+    "version": "1.0.1",
     "module": "index.ts",
     "type": "module",
     "scripts": {

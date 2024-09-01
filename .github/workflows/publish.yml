@@ -1,0 +1,28 @@
+name: Publish to NPM
+
+on:
+    push:
+        branches: "main"
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+            - uses: oven-sh/setup-bun@v2
+
+            - uses: actions/cache@v4
+              with:
+                  path: node_modules
+                  key: ${{ runner.os }}-node-modules-cache
+
+            - name: Install deps
+              run: bun install
+
+            - name: Setting NPM API key
+              run: npm config set -- '//registry.npmjs.org/:_authToken' "${{ secrets.NPM_TOKEN }}"
+
+            - name: Running NPM publish
+              run: npm publish --access public
