@@ -43,6 +43,12 @@ export const success = (...message: any[]) => {
     });
 };
 
+export const info = (...message: any[]) => {
+    spin_wrapper(() => {
+        console.log(color_text("blue", ...message));
+    });
+};
+
 export const warning = (...message: any[]) => {
     spin_wrapper(() => {
         console.warn(color_text("yellow", ...message));
@@ -64,4 +70,4 @@ export const log = (...message: any[]) => {
     }
     console.log(...message);
 };
-export default { error, success, warning, fatal, log };
+export default { info, error, success, warning, fatal, log };

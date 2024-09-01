@@ -1,19 +1,29 @@
 import { rmSync } from "fs-extra";
+import path from "path";
 import { chunkArr } from "./array";
 import { download_utility } from "./download_utility";
+import { projectRoot, readJSON } from "./fs";
 import { get_utility_versions } from "./github";
 import logger from "./logger";
 import { CPU_COUNT } from "./os";
 import {
     assembleProjectContext,
     checkUtility,
-    getUtilityByName,
     projectContext,
     selectUtilityByName,
+    utilityConfigFileName,
     type DependencyDescription,
     type ProjectContext
 } from "./project";
-import { collect_dependencies_list, compareVersions, get_remote_version_config_file, parseVersionOrExit, process_utility_identifier_input, type Version } from "./utility";
+import {
+    collect_dependencies_list,
+    compareVersions,
+    get_remote_version_config_file,
+    parseVersionOrExit,
+    process_utility_identifier_input,
+    type UtilityFile,
+    type Version,
+} from "./utility";
 
 export const process_dependencies = async (
     deps: { [utility_name: string]: DependencyDescription },
@@ -81,14 +91,15 @@ export const pull_utility = async ({
         utility_current_owner_different_from_provided,
         utility_exists_on_project,
         utility_parent_dir_relative_path,
-        utility_dir_name
+        utility_dir_name,
     } = await process_utility_identifier_input(input_utility_name);
 
     const versions = await get_utility_versions(owner, repo, true);
     if (!versions.length || !versions.at(-1)) {
-        logger.fatal("Remote Utility is not detected, and have no versions");
+        logger.error("Remote Utility is not detected, and have no versions");
         return;
     }
+    logger.info("Latest Version for util", `${repo}/${owner}`, version?.at(-1))
 
     const utility_name = repo;
     const util = selectUtilityByName(context, utility_name);
@@ -103,20 +114,29 @@ export const pull_utility = async ({
             version: selected_version.version as any,
         };
     };
-    const pull = async (selected_version: Version) => {
-        await download_utility(owner, utility_name, selected_version.version, utility_parent_dir_relative_path, utility_dir_name);
-        const utility = await getUtilityByName(utility_name);
-        if (utility) {
-            await process_dependencies(utility.configFile.deps, false);
+
+    const process_deps = async () => {
+        const utility_full_path = path.join(projectRoot, utility_parent_dir_relative_path, utility_dir_name);
+        const utility_config_file = readJSON<UtilityFile>(path.join(utility_full_path, utilityConfigFileName));
+        if (utility_config_file) {
+            await process_dependencies(utility_config_file.deps, false);
         }
+    };
+    const pull = async (selected_version: Version) => {
+        await download_utility(
+            owner,
+            utility_name,
+            selected_version.version,
+            utility_parent_dir_relative_path,
+            utility_dir_name,
+        );
+        await process_deps();
         await update_dependency_on_package_dot_json(selected_version);
     };
+
     const up_to_date = async (selected_version: Version) => {
         logger.success("utility", utility_name, "Up to date");
-        const utility = await getUtilityByName(utility_name);
-        if (utility) {
-            await process_dependencies(utility.configFile.deps, false);
-        }
+        await process_deps();
         await update_dependency_on_package_dot_json(selected_version);
         return;
     };
@@ -131,6 +151,24 @@ export const pull_utility = async ({
     }
 
     const utilVersion = parseVersionOrExit(util.configFile.version);
+
+    if(!versions.find(v=>{
+        return v.version == utilVersion.version
+    })){
+        logger.warning("utility ", util.configFile.name, "at", util.path, "current version", util.configFile.version, "does not exist remotely, please push")
+        return
+    }
+
+    const check_result = await checkUtility(projectContext, util.configFile.name)
+    util.configFile.hash = check_result.currentHash
+
+    const remote_config_file_for_current_version = await get_remote_version_config_file(owner, repo, util.configFile.version)
+    if(remote_config_file_for_current_version){
+        if(remote_config_file_for_current_version.hash != util.configFile.hash){
+            logger.warning("utility ", util.configFile.name, "at", util.path, "current version", util.configFile.version, " local hash does not remote hash, please make sure you updated the version and push")
+            return; 
+        }
+    }
 
     if (update_policy == "fixed") {
         const version = target_version.version;
@@ -182,7 +220,6 @@ export const pull_utility = async ({
     }
 };
 
-
 export const pull_all_utilities = async ({ keep_excess_utilities = false }: { keep_excess_utilities?: boolean }) => {
     const package_dot_json = projectContext.packageFile;
     const main_dependencies = package_dot_json.verde.dependencies;
@@ -195,31 +232,60 @@ export const pull_all_utilities = async ({ keep_excess_utilities = false }: { ke
         const excess = updated_context.utilities.filter(u => {
             return !all_dependencies[u.configFile.name];
         });
-        const chunked_excess = chunkArr(excess, CPU_COUNT*4)
-        for(const excess_chunk of chunked_excess){
-            await Promise.all(excess_chunk.map(async (util)=>{    
-                const versions = await get_utility_versions(util.configFile.owner, util.configFile.name, true)
-                const found_version = versions.find(v=>v.version == util.configFile.version); 
-                if(!found_version){
-                    logger.warning("Utility", util.configFile.owner+"/"+util.configFile.name, "is not registered on main dependencies, and its current version does not exists remotely, please push to register it, or remove it manually.")
-                    return 
-                }
-                if(found_version){
-                    const remote_config = await get_remote_version_config_file(util.configFile.owner, util.configFile.name, found_version.version)
-                    if(!remote_config){
-                        logger.warning("Utility", util.configFile.owner+"/"+util.configFile.name, " version", found_version.version," is not registered on main dependencies but", "has corrupt remote origin,  since its config file not found, to fix please push or fix it manually.")
-                        return
+        const chunked_excess = chunkArr(excess, CPU_COUNT * 4);
+        for (const excess_chunk of chunked_excess) {
+            await Promise.all(
+                excess_chunk.map(async util => {
+                    const versions = await get_utility_versions(util.configFile.owner, util.configFile.name, true);
+                    const found_version = versions.find(v => v.version == util.configFile.version);
+                    if (!found_version) {
+                        logger.warning(
+                            "Utility",
+                            util.configFile.owner + "/" + util.configFile.name,
+                            "is not registered on main dependencies, and its current version does not exists remotely, please push to register it, or remove it manually.",
+                        );
+                        return;
                     }
+                    if (found_version) {
+                        const remote_config = await get_remote_version_config_file(
+                            util.configFile.owner,
+                            util.configFile.name,
+                            found_version.version,
+                        );
+                        if (!remote_config) {
+                            logger.warning(
+                                "Utility",
+                                util.configFile.owner + "/" + util.configFile.name,
+                                " version",
+                                found_version.version,
+                                " is not registered on main dependencies but",
+                                "has corrupt remote origin,  since its config file not found, to fix please push or fix it manually.",
+                            );
+                            return;
+                        }
 
-                    const check_result = await checkUtility(projectContext, util.configFile.name)
-                    if(remote_config.hash != check_result.currentHash){
-                        logger.warning("Utility", util.configFile.owner+"/"+util.configFile.name, " version", found_version.version," is not registered on main dependencies, ", "its remote config hash does not match current hash, did you forgot to update its version and pushing after editing it?")
-                        return 
+                        const check_result = await checkUtility(projectContext, util.configFile.name);
+                        if (remote_config.hash != check_result.currentHash) {
+                            logger.warning(
+                                "Utility",
+                                util.configFile.owner + "/" + util.configFile.name,
+                                " version",
+                                found_version.version,
+                                " is not registered on main dependencies, ",
+                                "its remote config hash does not match current hash, did you forgot to update its version and pushing after editing it?",
+                            );
+                            return;
+                        }
                     }
-                }
-                logger.success("removing excess utility", util.configFile.owner+"/"+util.configFile.name, "at", util.path)
-                rmSync(util.path, { recursive: true });
-            }))  
+                    logger.success(
+                        "removing excess utility",
+                        util.configFile.owner + "/" + util.configFile.name,
+                        "at",
+                        util.path,
+                    );
+                    rmSync(util.path, { recursive: true });
+                }),
+            );
         }
     }
 };
