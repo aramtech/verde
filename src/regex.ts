@@ -1,4 +1,4 @@
-import { } from "./utility";
+import {} from "./utility";
 
 const strip_regex = (regex: RegExp) => {
     const stripped = String(regex).slice(1, -1).replace(/\$$/, "").replace(/^\^/, "");

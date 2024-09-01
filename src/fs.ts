@@ -102,5 +102,5 @@ const findProjectRoot = async (currentDir = path.resolve(".")): Promise<string> 
     return findProjectRoot(parentDir);
 };
 export const projectRoot = await findProjectRoot();
-logger.log("current project root", projectRoot)
+logger.log("current project root", projectRoot);
 export { findProjectRoot };

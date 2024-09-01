@@ -10,9 +10,9 @@ const parseAndRun = async () => {
 
     addCommands(program);
     await program.parseAsync();
-    loadingSpinner.stop()
-    console.log("\n\n")
+    loadingSpinner.stop();
+    console.log("\n\n");
 };
 
 await parseAndRun();
-process.exit()
+process.exit();

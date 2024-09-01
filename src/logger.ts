@@ -13,7 +13,7 @@ const colors = {
 };
 
 export const loadingSpinner = ora();
-loadingSpinner.start()
+loadingSpinner.start();
 const color_text = (
     color: "black" | "red" | "green" | "yellow" | "blue" | "magenta" | "cyan" | "white" | "console_color",
     ...text: any[]
@@ -62,9 +62,9 @@ export const fatal = (...message: any[]): never => {
     });
 };
 export const log = (...message: any[]) => {
-    if (loadingSpinner.isSpinning) {   
+    if (loadingSpinner.isSpinning) {
         // loadingSpinner.stop()
-        loadingSpinner.text = message.join(" ");        
+        loadingSpinner.text = message.join(" ");
         // loadingSpinner.start()
         return;
     }

@@ -8,16 +8,9 @@ import logger from "./logger";
 import { CPU_COUNT } from "./os";
 import { readAnswerTo } from "./prompt";
 import { type UtilityDescription, type UtilityFile } from "./utility";
-const {
-    collectDirsWithFile,
-    findProjectRoot,
-    projectRoot,
-    readFiles,
-    readJSON,
-    removeDir,
-    storeJSON
-} = (await import("./fs"));
-
+const { collectDirsWithFile, findProjectRoot, projectRoot, readFiles, readJSON, removeDir, storeJSON } = await import(
+    "./fs"
+);
 
 export const utilityConfigFileName = "utils.json";
 
@@ -30,11 +23,9 @@ export const updatePackageDotJson = () => {
 
 export const updateUtilityHash = (f: UtilityFile, nextHash: string): UtilityFile => ({ ...f, hash: nextHash });
 
-
 export const markUtilityFileAsPrivate = (f: UtilityFile): UtilityFile => ({ ...f, private: true });
 
 export const markUtilityAsPublic = (f: UtilityFile): UtilityFile => ({ ...f, private: false });
-
 
 export const listUtilitiesInDirectory = async (projectPath: string): Promise<UtilityDescription[]> => {
     const traverseResult = await collectDirsWithFile(projectPath, {
@@ -78,7 +69,7 @@ export type DependencyDescription = {
 
 export type PackageDotJSONFile = {
     name: string;
-    version: string; 
+    version: string;
     dependencies: Record<string, string>;
     devDependencies: Record<string, string>;
     verde: VerdeConfig;
@@ -125,18 +116,16 @@ export const getDefaultOrganizationPath = async () => {
 };
 
 export const assembleProjectContext = async (pathOrCwd: string = process.cwd()): Promise<ProjectContext> => {
-    logger.log("assembling project context...", projectRoot)
-    
+    logger.log("assembling project context...", projectRoot);
+
     logger.log("listing all utilities");
     const utilities = await listUtilitiesInDirectory(projectRoot);
- 
-    logger.log("listing utilities in current directory")
+
+    logger.log("listing utilities in current directory");
     const utilitiesInCwd = projectRoot === pathOrCwd ? utilities : await listUtilitiesInDirectory(pathOrCwd);
-    
-    logger.log("loading package.json")
+
+    logger.log("loading package.json");
     const packageFile = readJSON<PackageDotJSONFile>(join(projectRoot, "package.json"));
-    
-    
 
     if (packageFile.verde === undefined) {
         const verde: VerdeConfig = {
@@ -153,8 +142,6 @@ export const assembleProjectContext = async (pathOrCwd: string = process.cwd()):
 
         await storeJSON(join(projectRoot, "package.json"), packageFileWithVerde);
 
-
-        
         return {
             utilities,
             utilitiesInCwd,
@@ -162,16 +149,16 @@ export const assembleProjectContext = async (pathOrCwd: string = process.cwd()):
             packageFile: packageFileWithVerde,
         };
     }
-    logger.log("sorting dependencies")
-    packageFile.verde.grouping = packageFile.verde.grouping.sort((gA, gB)=>{
-        if(gA.prefix.length > gB.prefix.length){
-            return 1
-        } else if(gA.prefix.length < gB.prefix.length){
-            return -1
-        }else{
-            return 0
+    logger.log("sorting dependencies");
+    packageFile.verde.grouping = packageFile.verde.grouping.sort((gA, gB) => {
+        if (gA.prefix.length > gB.prefix.length) {
+            return 1;
+        } else if (gA.prefix.length < gB.prefix.length) {
+            return -1;
+        } else {
+            return 0;
         }
-    })
+    });
 
     return {
         utilities,

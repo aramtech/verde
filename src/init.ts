@@ -8,7 +8,7 @@ import { process_utility_identifier_input, type UtilityFile } from "./utility";
 
 export const initNewUtility = async (name: string, description: string) => {
     const context = projectContext;
-    const {owner, repo: utility_name} = await process_utility_identifier_input(name)
+    const { owner, repo: utility_name } = await process_utility_identifier_input(name);
 
     if (await isStoredOnDisk(utilityConfigFileName)) {
         logger.fatal("directory already managed by verde!.");

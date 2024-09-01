@@ -7,15 +7,18 @@ import { lock_method } from "./sync";
 
 const tokens_cache_file_name = "tokens.json";
 let password: null | string = null;
-const read_tokens_password = lock_method(async () => {
-    if (password) {
+const read_tokens_password = lock_method(
+    async () => {
+        if (password) {
+            return password;
+        }
+        password = await readAnswerTo("please enter password for your tokens cache");
         return password;
-    }
-    password = await readAnswerTo("please enter password for your tokens cache");
-    return password;
-}, {
-    lock_name: "read_tokens_password"
-});
+    },
+    {
+        lock_name: "read_tokens_password",
+    },
+);
 
 const create_tokens_cache_file_if_it_does_not_exist = async () => {
     const password = await read_tokens_password();
@@ -62,7 +65,7 @@ const store_token_in_storage = async (owner: string, token: string) => {
 
 export const get_token_for_org = async (org_name: string) => {
     let github_personal_access_token = "";
-    
+
     let try_count = 0;
 
     while (true) {
@@ -75,7 +78,7 @@ export const get_token_for_org = async (org_name: string) => {
             "Please provide your classic personal github access token (you can create one at https://github.com/settings/tokens)\n\n Token:",
         );
 
-        loadingSpinner.text = "Verifying Token for owner: "+org_name+"...";
+        loadingSpinner.text = "Verifying Token for owner: " + org_name + "...";
         loadingSpinner.start();
 
         try {
@@ -97,7 +100,7 @@ export const get_token_for_org = async (org_name: string) => {
             if (error?.status == 404) {
                 logger.fatal("organization does not exist");
             }
-            logger.error("\nInvalid Github Access Token, Please Make sure that the token is valid.\n" ,error);
+            logger.error("\nInvalid Github Access Token, Please Make sure that the token is valid.\n", error);
             loadingSpinner.stop();
             continue;
         }
@@ -108,29 +111,32 @@ export const get_token_for_org = async (org_name: string) => {
 let cached_record: {
     [owner: string]: string; // token
 } = {};
-export const get_token = lock_method(async (owner: string) => {
-    if (cached_record[owner]) {
-        return cached_record[owner];
-    }
+export const get_token = lock_method(
+    async (owner: string) => {
+        if (cached_record[owner]) {
+            return cached_record[owner];
+        }
 
-    const stored_token = await get_token_from_storage(owner);
+        const stored_token = await get_token_from_storage(owner);
 
-    const useGlobalToken =
-        !!stored_token && (await requestPermsToRun("There is a global encrypted token stored, do you wish to use it?"));
+        const useGlobalToken =
+            !!stored_token &&
+            (await requestPermsToRun("There is a global encrypted token stored, do you wish to use it?"));
 
-    if (useGlobalToken) {
-        cached_record[owner] = stored_token;
-        return stored_token;
-    }
+        if (useGlobalToken) {
+            cached_record[owner] = stored_token;
+            return stored_token;
+        }
 
-    const token = await get_token_for_org(owner);
-    if (await requestPermsToRun("would you like to store token and organization name")) {
-        await store_token_in_storage(owner, token);
-    }
-    cached_record[owner] = token;
+        const token = await get_token_for_org(owner);
+        if (await requestPermsToRun("would you like to store token and organization name")) {
+            await store_token_in_storage(owner, token);
+        }
+        cached_record[owner] = token;
 
-    return token;
-}, {
-    lock_name: "get_token"
-});
-
+        return token;
+    },
+    {
+        lock_name: "get_token",
+    },
+);

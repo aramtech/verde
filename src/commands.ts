@@ -52,23 +52,23 @@ const addRemoveUtilityCommand = (program: Command) =>
 
 const addPushUtilityCommand = (program: Command) =>
     program.command("push [name]").action(async (utility_name?: string) => {
-        loadingSpinner.start()
+        loadingSpinner.start();
 
         if (utility_name) {
             logger.log("pushing single");
             await push_utility({
-                context: projectContext, 
-                input_utility_name: utility_name, 
-                main_dep: true, 
+                context: projectContext,
+                input_utility_name: utility_name,
+                main_dep: true,
             });
-            updatePackageDotJson()
-            loadingSpinner.stop();  
+            updatePackageDotJson();
+            loadingSpinner.stop();
             return;
         }
 
         await pushAllUtilities(context);
-        updatePackageDotJson() 
-        loadingSpinner.stop();  
+        updatePackageDotJson();
+        loadingSpinner.stop();
     });
 
 const addHideCommand = (program: Command) =>
@@ -133,10 +133,10 @@ const addPullCommand = (program: Command) =>
                     const { owner, repo } = await process_utility_identifier_input(name);
                     const packageDotJSONFile = projectContext.packageFile;
                     let update_policy: "major" | "minor" | "fixed" | "batch" = "minor";
-                    let target_version: string | undefined = undefined; 
+                    let target_version: string | undefined = undefined;
                     if (packageDotJSONFile.verde.dependencies[repo]) {
                         update_policy = packageDotJSONFile.verde.dependencies[repo].update_policy;
-                        target_version = packageDotJSONFile.verde.dependencies[repo].version
+                        target_version = packageDotJSONFile.verde.dependencies[repo].version;
                     }
                     await pull_utility({
                         main_dep: true,
@@ -145,12 +145,12 @@ const addPullCommand = (program: Command) =>
                         version: version || target_version,
                         update_policy: version ? "fixed" : update_policy,
                     });
-                    updatePackageDotJson() 
+                    updatePackageDotJson();
                     return;
                 }
 
                 await pull_all_utilities({ keep_excess_utilities: !!options.keepExcessUtilities });
-                updatePackageDotJson() 
+                updatePackageDotJson();
             },
         );
 
@@ -193,20 +193,20 @@ const addCacheCommands = (program: Command) =>
             await listCachedItems();
         });
 
-import path from "path"
-import url from "url"
+import path from "path";
+import url from "url";
 import { readJSON } from "./fs";
-const currend_dir = url.fileURLToPath(new url.URL("./.", import.meta.url))
-const verde_package_dot_json_file = path.join(currend_dir, "../package.json")
+const currend_dir = url.fileURLToPath(new url.URL("./.", import.meta.url));
+const verde_package_dot_json_file = path.join(currend_dir, "../package.json");
 export const addCommands = (program: Command) => {
-    program.option("-v, --version").action(({version}: {version: boolean})=>{
-        if(version){
-            const verde_package_dot_json: PackageDotJSONFile = readJSON(verde_package_dot_json_file)
-            logger.info(verde_package_dot_json.version)
-            return 
+    program.option("-v, --version").action(({ version }: { version: boolean }) => {
+        if (version) {
+            const verde_package_dot_json: PackageDotJSONFile = readJSON(verde_package_dot_json_file);
+            logger.info(verde_package_dot_json.version);
+            return;
         }
-        program.help()
-    })
+        program.help();
+    });
     addInitCommand(program);
     addListToProgram(program);
     addRemoveUtilityCommand(program);

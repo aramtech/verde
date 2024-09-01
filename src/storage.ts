@@ -23,7 +23,7 @@ const fileNameToPath = (fileName: string) => path.join(getVerdeDirPath(), fileNa
 export const saveToFileStorage = async (name: string, content: string): Promise<void> => {
     const filepath = fileNameToPath(name);
     await fs.writeFile(filepath, content, {
-        encoding: "utf-8"
+        encoding: "utf-8",
     });
 };
 
@@ -38,10 +38,12 @@ export const areFilesStored = async (...filesNames: string[]): Promise<Record<st
     const result: Record<string, boolean> = {};
 
     for (const paths of chunkedPaths) {
-        await Promise.all(paths.map(async fileName => {
-            const fileFullPath = fileNameToPath(fileName); 
-            result[fileName] = await fs.exists(fileFullPath)
-        }));
+        await Promise.all(
+            paths.map(async fileName => {
+                const fileFullPath = fileNameToPath(fileName);
+                result[fileName] = await fs.exists(fileFullPath);
+            }),
+        );
     }
 
     return result;

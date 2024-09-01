@@ -5,11 +5,15 @@ import fs from "fs";
 import path from "path";
 import { command_on_system, run_command } from "../../exec";
 import { collectFilePathsIn } from "../../fs";
-import { delete_file_from_repo, deleteBranchOnFailure, forceUploadFileToRepo, get_token_for_repo, list_files_in_repo, repo_name_to_api_link } from "../../github";
+import {
+    delete_file_from_repo,
+    deleteBranchOnFailure,
+    forceUploadFileToRepo,
+    get_token_for_repo,
+    list_files_in_repo,
+    repo_name_to_api_link,
+} from "../../github";
 import logger, { loadingSpinner } from "../../logger";
-
-
-
 
 // Helper to read directory contents recursively
 export async function readDirectoryRecursive(dirPath: string) {
@@ -331,7 +335,6 @@ export const get_files_with_github_api = async (full_repo_name: string, branch: 
     await download_repo_files(full_repo_name, branch, github_personal_access_token, new_project_path);
 };
 
-
 const download_repo_files = async (
     repo_name: string,
     branch: string,
@@ -435,4 +438,3 @@ const download_repo_files = async (
         logger.fatal("Error: Something went wrong");
     }
 };
-

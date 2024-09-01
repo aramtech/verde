@@ -162,7 +162,7 @@ export async function list_branches(owner: string, repo: string, kill = false) {
 
         return branches;
     } catch (error: any) {
-        if(error.status >= 500){
+        if (error.status >= 500) {
             logger.fatal(`Error listing branches: ${error.message}`);
         }
         if (kill) {

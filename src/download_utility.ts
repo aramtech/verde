@@ -16,12 +16,12 @@ export async function downloadRepoAsZip({
     repo,
     branch,
     relative_installation_directory,
-    dir_name
+    dir_name,
 }: {
     owner: string;
     repo: string;
     branch: string;
-    dir_name: string; 
+    dir_name: string;
     relative_installation_directory: string;
 }) {
     const url = `https://github.com/${owner}/${repo}/archive/refs/heads/${branch}.zip`;
@@ -148,7 +148,7 @@ export const download_utility = async (
             repo: utility_name,
             branch: version,
             relative_installation_directory: utility_parent_dir_relative_path,
-            dir_name: utility_dir_name
+            dir_name: utility_dir_name,
         });
     } catch (error) {
         logger.fatal("Failed to download utility", utility_name, error);

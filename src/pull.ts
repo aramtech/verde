@@ -13,7 +13,7 @@ import {
     selectUtilityByName,
     utilityConfigFileName,
     type DependencyDescription,
-    type ProjectContext
+    type ProjectContext,
 } from "./project";
 import {
     collect_dependencies_list,
@@ -99,7 +99,7 @@ export const pull_utility = async ({
         logger.error("Remote Utility is not detected, and have no versions");
         return;
     }
-    logger.info("Latest Version for util", `${repo}/${owner}`, version?.at(-1))
+    logger.info("Latest Version for util", `${repo}/${owner}`, version?.at(-1));
 
     const utility_name = repo;
     const util = selectUtilityByName(context, utility_name);
@@ -152,21 +152,43 @@ export const pull_utility = async ({
 
     const utilVersion = parseVersionOrExit(util.configFile.version);
 
-    if(!versions.find(v=>{
-        return v.version == utilVersion.version
-    })){
-        logger.warning("utility ", util.configFile.name, "at", util.path, "current version", util.configFile.version, "does not exist remotely, please push")
-        return
+    if (
+        !versions.find(v => {
+            return v.version == utilVersion.version;
+        })
+    ) {
+        logger.warning(
+            "utility ",
+            util.configFile.name,
+            "at",
+            util.path,
+            "current version",
+            util.configFile.version,
+            "does not exist remotely, please push",
+        );
+        return;
     }
 
-    const check_result = await checkUtility(projectContext, util.configFile.name)
-    util.configFile.hash = check_result.currentHash
+    const check_result = await checkUtility(projectContext, util.configFile.name);
+    util.configFile.hash = check_result.currentHash;
 
-    const remote_config_file_for_current_version = await get_remote_version_config_file(owner, repo, util.configFile.version)
-    if(remote_config_file_for_current_version){
-        if(remote_config_file_for_current_version.hash != util.configFile.hash){
-            logger.warning("utility ", util.configFile.name, "at", util.path, "current version", util.configFile.version, " local hash does not remote hash, please make sure you updated the version and push")
-            return; 
+    const remote_config_file_for_current_version = await get_remote_version_config_file(
+        owner,
+        repo,
+        util.configFile.version,
+    );
+    if (remote_config_file_for_current_version) {
+        if (remote_config_file_for_current_version.hash != util.configFile.hash) {
+            logger.warning(
+                "utility ",
+                util.configFile.name,
+                "at",
+                util.path,
+                "current version",
+                util.configFile.version,
+                " local hash does not remote hash, please make sure you updated the version and push",
+            );
+            return;
         }
     }
 

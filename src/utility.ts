@@ -4,7 +4,13 @@ import { projectRoot } from "./fs";
 import { get_file_from_repo, type SingleGithubFile } from "./github";
 import logger from "./logger";
 import { get_default_owner, read_owner_name } from "./owner";
-import { projectContext, selectUtilityByName, utilityConfigFileName, type DependencyDescription, type ProjectContext } from "./project";
+import {
+    projectContext,
+    selectUtilityByName,
+    utilityConfigFileName,
+    type DependencyDescription,
+    type ProjectContext,
+} from "./project";
 import { readAnswerTo, requestPermsToRun } from "./prompt";
 import { owner_utility_match_regex, utility_name_validation_regex, utility_version_validation_regex } from "./regex";
 
@@ -18,7 +24,7 @@ export type UtilityFile = { name: string } & {
     owner: string;
 };
 
-export const get_remote_version_config_file = async (owner: string, repo: string, version: string)=>{
+export const get_remote_version_config_file = async (owner: string, repo: string, version: string) => {
     const last_remote_config_file = (await get_file_from_repo(
         owner,
         repo,
@@ -31,14 +37,14 @@ export const get_remote_version_config_file = async (owner: string, repo: string
             owner: owner,
             repo: repo,
         });
-        return null; 
+        return null;
     } else {
         const remote_util_config: UtilityFile = JSON.parse(
             Buffer.from(last_remote_config_file.content, "base64").toString("utf-8"),
         );
-        return remote_util_config
+        return remote_util_config;
     }
-}
+};
 
 export const parseUtilityFileFromBuffer = (buff: Buffer) => {
     const parsed = JSON.parse(buff.toString("utf-8"));
@@ -123,7 +129,6 @@ export const isUtilityNameValid = (name: string) => {
     return name.match(utility_name_validation_regex);
 };
 
-
 export const parseVersionOrExit = (v: string): Version => {
     const parsed = parseUtilityVersion(v);
     if (!parsed) {
@@ -143,14 +148,13 @@ const processed_utility_identifier_inputs: {
         repo: string;
         utility_current_owner_different_from_provided: boolean;
         utility_exists_on_project: boolean;
-        utility_parent_dir_relative_path: string; 
-        utility_dir_name: string; 
-    }
-} = {}
+        utility_parent_dir_relative_path: string;
+        utility_dir_name: string;
+    };
+} = {};
 export const process_utility_identifier_input = async (input: string) => {
-    
-    if(processed_utility_identifier_inputs[input]){
-        return processed_utility_identifier_inputs[input]
+    if (processed_utility_identifier_inputs[input]) {
+        return processed_utility_identifier_inputs[input];
     }
     let owner: string;
     let repo: string;
@@ -161,7 +165,7 @@ export const process_utility_identifier_input = async (input: string) => {
     if (owner_and_repo_match) {
         owner = owner_and_repo_match[1];
         repo = owner_and_repo_match[2];
-        specified_owner = true; 
+        specified_owner = true;
         const utility = selectUtilityByName(projectContext, repo);
         if (utility) {
             utility_exists_on_project = true;
@@ -182,8 +186,15 @@ export const process_utility_identifier_input = async (input: string) => {
         const utility = selectUtilityByName(projectContext, repo);
         if (utility) {
             owner = utility.configFile.owner;
-            if(!owner){
-                logger.fatal("utility ", utility.configFile.name, " has no specified owner.", "please go to ", path.join(utility.path, utilityConfigFileName), "and add owner")
+            if (!owner) {
+                logger.fatal(
+                    "utility ",
+                    utility.configFile.name,
+                    " has no specified owner.",
+                    "please go to ",
+                    path.join(utility.path, utilityConfigFileName),
+                    "and add owner",
+                );
             }
             utility_exists_on_project = true;
         } else {
@@ -201,54 +212,61 @@ export const process_utility_identifier_input = async (input: string) => {
         );
         process.exit(1);
     }
-    let utility_parent_dir_relative_path: string; 
+    let utility_parent_dir_relative_path: string;
     let utility_dir_name: string;
 
     const utility = selectUtilityByName(projectContext, repo);
 
-    const group = projectContext.packageFile.verde.grouping.find(g=>repo.startsWith(g.prefix))
-    if(utility){
-        utility_parent_dir_relative_path = path.dirname(utility.path).slice(projectRoot.length)
-        utility_dir_name = path.basename(utility.path)
-    }else{
-        if(group){
-            if(!specified_owner){
-                owner = group.owner
+    const group = projectContext.packageFile.verde.grouping.find(g => repo.startsWith(g.prefix));
+    if (utility) {
+        utility_parent_dir_relative_path = path.dirname(utility.path).slice(projectRoot.length);
+        utility_dir_name = path.basename(utility.path);
+    } else {
+        if (group) {
+            if (!specified_owner) {
+                owner = group.owner;
             }
-            utility_parent_dir_relative_path = group.installationDestination
-            if(group.removePrefixOnPull){
-                utility_dir_name = repo.slice(group.prefix.length)
-            }else{
-                utility_dir_name = repo
+            utility_parent_dir_relative_path = group.installationDestination;
+            if (group.removePrefixOnPull) {
+                utility_dir_name = repo.slice(group.prefix.length);
+            } else {
+                utility_dir_name = repo;
             }
-        }else{
-            if(projectContext.packageFile.verde.defaultInstallationPath){
-                utility_parent_dir_relative_path = projectContext.packageFile.verde.defaultInstallationPath
-            }else{
-                utility_parent_dir_relative_path = await read_installation_path()
+        } else {
+            if (projectContext.packageFile.verde.defaultInstallationPath) {
+                utility_parent_dir_relative_path = projectContext.packageFile.verde.defaultInstallationPath;
+            } else {
+                utility_parent_dir_relative_path = await read_installation_path();
             }
-            utility_dir_name = repo
+            utility_dir_name = repo;
         }
     }
-        
-    const installation_full_path = path.join(projectRoot, utility_parent_dir_relative_path)
 
-    if(!existsSync(installation_full_path)){
-        logger.fatal("Specified Installation path does not exist")
+    const installation_full_path = path.join(projectRoot, utility_parent_dir_relative_path);
+
+    if (!existsSync(installation_full_path)) {
+        logger.fatal("Specified Installation path does not exist");
     }
-    if(!statSync(installation_full_path).isDirectory()){
-        logger.fatal("Specified Installation path is not a directory")
+    if (!statSync(installation_full_path).isDirectory()) {
+        logger.fatal("Specified Installation path is not a directory");
     }
 
-    const result =  { owner, repo ,utility_current_owner_different_from_provided, utility_exists_on_project,utility_parent_dir_relative_path, utility_dir_name };
-    processed_utility_identifier_inputs[input] = result; 
-    return result; 
+    const result = {
+        owner,
+        repo,
+        utility_current_owner_different_from_provided,
+        utility_exists_on_project,
+        utility_parent_dir_relative_path,
+        utility_dir_name,
+    };
+    processed_utility_identifier_inputs[input] = result;
+    return result;
 };
 
-const read_installation_path = async ()=>{
-    const answer = await readAnswerTo("where do you want to install this utility")
-    return answer
-}
+const read_installation_path = async () => {
+    const answer = await readAnswerTo("where do you want to install this utility");
+    return answer;
+};
 
 export const collect_dependencies_list = async (
     context: ProjectContext,
