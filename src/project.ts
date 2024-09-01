@@ -78,6 +78,7 @@ export type DependencyDescription = {
 
 export type PackageDotJSONFile = {
     name: string;
+    version: string; 
     dependencies: Record<string, string>;
     devDependencies: Record<string, string>;
     verde: VerdeConfig;

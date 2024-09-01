@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { deleteBranchOnFailure, get_utility_versions } from "./github";
-import { getUtilityByName, projectContext, updatePackageDotJson } from "./project";
+import { getUtilityByName, projectContext, updatePackageDotJson, type PackageDotJSONFile } from "./project";
 
 import { clearCachedItems, listCachedItems } from "./cache";
 
@@ -193,7 +193,20 @@ const addCacheCommands = (program: Command) =>
             await listCachedItems();
         });
 
+import path from "path"
+import url from "url"
+import { readJSON } from "./fs";
+const currend_dir = url.fileURLToPath(new url.URL("./.", import.meta.url))
+const verde_package_dot_json_file = path.join(currend_dir, "../package.json")
 export const addCommands = (program: Command) => {
+    program.option("-v, --version").action(({version}: {version: boolean})=>{
+        if(version){
+            const verde_package_dot_json: PackageDotJSONFile = readJSON(verde_package_dot_json_file)
+            logger.info(verde_package_dot_json.version)
+            return 
+        }
+        program.help()
+    })
     addInitCommand(program);
     addListToProgram(program);
     addRemoveUtilityCommand(program);
