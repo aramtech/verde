@@ -282,7 +282,17 @@ export const collect_dependencies_list = async (
 
         const utility = selectUtilityByName(context, dep);
         if (utility) {
-            deps = { ...deps, ...(await collect_dependencies_list(context, utility.configFile.deps)) };
+            deps = {
+                ...deps,
+                ...(await collect_dependencies_list(
+                    context,
+                    Object.fromEntries(
+                        Object.entries(utility.configFile.deps).filter(([name, sub_dep]) => {
+                            return dep != name;
+                        }),
+                    ),
+                )),
+            };
         }
     }
     return deps;

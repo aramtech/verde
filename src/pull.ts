@@ -25,6 +25,7 @@ import {
     type Version,
 } from "./utility";
 
+let processed_dependencies: string[] = [];
 export const process_dependencies = async (
     deps: { [utility_name: string]: DependencyDescription },
     main_dependencies: boolean,
@@ -33,6 +34,10 @@ export const process_dependencies = async (
     for (const chunk of chunks) {
         await Promise.all(
             chunk.map(async ([utility_name, dependency_description]) => {
+                if (processed_dependencies.includes(utility_name)) {
+                    return;
+                }
+                processed_dependencies.push(utility_name);
                 await pull_utility({
                     context: projectContext,
                     input_utility_name: `${dependency_description.owner}/${dependency_description.repo}`,
@@ -96,7 +101,7 @@ export const pull_utility = async ({
 
     const versions = await get_utility_versions(owner, repo, true);
     if (!versions.length || !versions.at(-1)) {
-        logger.error("Remote Utility is not detected, and have no versions");
+        logger.error("Remote Utility is not detected, and have no versions", input_utility_name);
         return;
     }
     logger.info("Latest Version for util", `${repo}/${owner}`, version?.at(-1));
