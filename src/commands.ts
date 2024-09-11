@@ -142,7 +142,7 @@ const addPullCommand = (program: Command) =>
                         main_dep: true,
                         context: projectContext,
                         input_utility_name: name,
-                        version: version || target_version,
+                        version: version,
                         update_policy: version ? "fixed" : update_policy,
                     });
                     updatePackageDotJson();

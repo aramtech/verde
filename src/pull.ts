@@ -89,7 +89,7 @@ export const pull_utility = async ({
      *    - pull specified version into prompted utils dir path
      *
      */
-
+    
     const {
         owner,
         repo,
@@ -104,10 +104,13 @@ export const pull_utility = async ({
         logger.error("Remote Utility is not detected, and have no versions", input_utility_name);
         return;
     }
-    logger.info("Latest Version for util", `${repo}/${owner}`, version?.at(-1));
+    logger.log("Latest Version for util", `${repo}/${owner}`, versions?.at(-1)?.version);
 
     const utility_name = repo;
     const util = selectUtilityByName(context, utility_name);
+    if(util){
+        logger.log("utility ", input_utility_name, "exists on the project at" , util?.path," with version",util?.configFile?.version )
+    }
     const update_dependency_on_package_dot_json = async (selected_version: Version) => {
         if (!main_dep) {
             return;
@@ -122,12 +125,14 @@ export const pull_utility = async ({
 
     const process_deps = async () => {
         const utility_full_path = path.join(projectRoot, utility_parent_dir_relative_path, utility_dir_name);
+        
         const utility_config_file = readJSON<UtilityFile>(path.join(utility_full_path, utilityConfigFileName));
         if (utility_config_file) {
             await process_dependencies(utility_config_file.deps, false);
         }
     };
     const pull = async (selected_version: Version) => {
+        logger.log("Pulling utility", input_utility_name, "with version", selected_version.version, ", and update policy is", update_policy)
         await download_utility(
             owner,
             utility_name,
@@ -140,7 +145,7 @@ export const pull_utility = async ({
     };
 
     const up_to_date = async (selected_version: Version) => {
-        logger.success("utility", utility_name, "Up to date");
+        logger.success("utility", utility_name, "Up to date" );
         await process_deps();
         await update_dependency_on_package_dot_json(selected_version);
         return;
@@ -151,6 +156,7 @@ export const pull_utility = async ({
     );
 
     if (!util || (utility_exists_on_project && utility_current_owner_different_from_provided)) {
+        logger.log("utility ", input_utility_name, "does not exist on the project and will be pulled with version", target_version.version)
         await pull(target_version);
         return;
     }
@@ -222,7 +228,7 @@ export const pull_utility = async ({
                     return v.major <= target_version.major;
                 })
                 .at(-1) || versions.at(-1)) as Version;
-
+            logger.log("selecting minor version for", input_utility_name, "with version", latest_minor_version)
             selected_version = latest_minor_version;
         } else if (update_policy == "batch") {
             const last_batch_version = (versions

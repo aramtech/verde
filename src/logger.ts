@@ -30,12 +30,14 @@ const spin_wrapper = <T>(cp: (...args: any[]) => T): T => {
     }
     return cp();
 };
-
+const _error = console.error
 export const error = (...message: any[]) => {
     spin_wrapper(() => {
-        console.error(color_text("red", ...message));
+        _error(color_text("red", ...message));
+        console.trace()
     });
 };
+console.error = error
 
 export const success = (...message: any[]) => {
     spin_wrapper(() => {
@@ -65,9 +67,13 @@ export const log = (...message: any[]) => {
     if (loadingSpinner.isSpinning) {
         // loadingSpinner.stop()
         loadingSpinner.text = message.join(" ");
+        // console.log(...message)
         // loadingSpinner.start()
         return;
     }
     console.log(...message);
 };
+
+
+
 export default { info, error, success, warning, fatal, log };

@@ -1,4 +1,3 @@
-import { run_command } from "./exec";
 import { findProjectRoot, is_valid_relative_path, projectRoot } from "./fs";
 import { get_relative_utils_paths_json, store_relative_utils_path } from "./github";
 import logger from "./logger";
@@ -9,7 +8,13 @@ import { get_token } from "./tokens";
 const axios = (await import("axios")).default;
 const fs = (await import("fs-extra")).default;
 const path = (await import("path")).default;
-const unzipper = (await import("unzipper")).default;
+
+import { pipeline } from "stream";
+import { promisify } from "util";
+
+const pipelineAsync = promisify(pipeline);
+
+import extract from "extract-zip";
 
 export async function downloadRepoAsZip({
     owner,
@@ -26,7 +31,6 @@ export async function downloadRepoAsZip({
 }) {
     const url = `https://github.com/${owner}/${repo}/archive/refs/heads/${branch}.zip`;
     const token = await get_token(owner);
-
     const zipPath = path.join(projectRoot, relative_installation_directory, `${repo}.zip`);
 
     // Download the ZIP file
@@ -40,37 +44,37 @@ export async function downloadRepoAsZip({
         },
     });
 
-    // Save the ZIP file
-    response.data.pipe(fs.createWriteStream(zipPath));
+    // Save the ZIP file using pipeline (manages stream ending properly)
+    await pipelineAsync(
+        response.data,
+        fs.createWriteStream(zipPath)
+    );
+
+    // Once the file is downloaded and saved, continue with unzipping
     const project_root = projectRoot;
-    return new Promise<void>((resolve, reject) => {
-        response.data.on("end", async () => {
-            logger.log("Writing downloaded file to cache...");
+    logger.log("Writing downloaded file to cache...");
 
-            const cacheWriter = createCacheWriteStream(`${repo}_branch_${branch}.zip`);
-            for await (const chunk of fs.createReadStream(zipPath)) {
-                cacheWriter.write(chunk);
-            }
-            cacheWriter.close();
-            logger.log("done");
+    const cacheWriter = createCacheWriteStream(`${repo}_branch_${branch}.zip`);
+    for await (const chunk of fs.createReadStream(zipPath)) {
+        cacheWriter.write(chunk);
+    }
+    cacheWriter.close();
+    logger.log("extracting zip file", zipPath)
+    // Unzip the file
+    
+    await extract(zipPath, { dir: path.join(projectRoot, relative_installation_directory) })
 
-            // Unzip the file
-            await fs
-                .createReadStream(zipPath)
-                .pipe(unzipper.Extract({ path: path.join(projectRoot, relative_installation_directory) }))
-                .promise();
+    logger.log("finished extracting zip file", zipPath)
 
-            // Clean up the ZIP file
-            await fs.remove(zipPath);
+    // Clean up and rename the unzipped directory
+    const extractedZipDirFullPath = path.join(project_root, relative_installation_directory, `${repo}-${branch}`)
+    const destinationUtilityDirFullPath = path.join(projectRoot, relative_installation_directory, dir_name)
+    logger.log("moving extraction to destination", extractedZipDirFullPath, destinationUtilityDirFullPath, )
+    fs.moveSync(extractedZipDirFullPath, destinationUtilityDirFullPath, {overwrite: true})
 
-            run_command(
-                `mv ${path.join(project_root, relative_installation_directory, `${repo}-${branch}`)}   ${path.join(projectRoot, relative_installation_directory, dir_name)}`,
-            );
-            resolve();
-        });
-
-        response.data.on("error", reject);
-    });
+    // Optionally, remove the ZIP file after unzipping if no longer needed
+    fs.rmSync(extractedZipDirFullPath, {recursive: true});
+    fs.rmSync(zipPath, {recursive: true});
 }
 
 let utils_dir_cache: string | null;

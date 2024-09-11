@@ -2,9 +2,21 @@
 
 import { program } from "commander";
 import { addCommands } from "./commands";
-import { loadingSpinner } from "./logger";
+import logger, { loadingSpinner } from "./logger";
 import { maybeCreateVerdeDirAtHomeDir } from "./storage";
 
+process.on("uncaughtException", error=>{
+    logger.fatal(error)
+})
+
+process.on("uncaughtExceptionMonitor", error=>{
+    logger.fatal(error)
+})
+
+
+process.on("unhandledRejection", error=>{
+    logger.fatal(error)
+})
 const parseAndRun = async () => {
     maybeCreateVerdeDirAtHomeDir();
 

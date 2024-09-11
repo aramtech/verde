@@ -57,7 +57,7 @@ export const collectDirsWithFile = async (initialPath: string, opts: CollectOpts
 
     for (const c of contents) {
         const fullPath = path.join(initialPath, c);
-        const stats = await fs.statSync(fullPath);
+        const stats = fs.statSync(fullPath);
 
         if (stats.isDirectory()) {
             const gotten = await collectDirsWithFile(fullPath, opts);
@@ -76,6 +76,7 @@ export const storeJSON = async <T>(nameOrPath: string, object: T) =>
 export const isStoredOnDisk = async (nameOrPath: string) => fs.existsSync(nameOrPath);
 
 export const readJSON = <T>(path: string) => {
+    logger.log("reading json at", path)
     const contents = fs.readFileSync(path, "utf-8");
     return JSON.parse(contents) as T;
 };
