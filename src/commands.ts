@@ -121,6 +121,7 @@ const addPullCommand = (program: Command) =>
                 options: {
                     version?: string;
                     keepExcessUtilities: boolean;
+                    force: boolean; 
                 },
             ) => {
                 const { version } = options;
@@ -144,6 +145,7 @@ const addPullCommand = (program: Command) =>
                         context: projectContext,
                         input_utility_name: name,
                         version: version,
+                        force: options.force,
                         update_policy: version ? "fixed" : update_policy,
                     });
                     updatePackageDotJson();
