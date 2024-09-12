@@ -109,7 +109,11 @@ export const pull_utility = async ({
     const utility_name = repo;
     const util = selectUtilityByName(context, utility_name);
     if(util){
-        logger.log("utility ", input_utility_name, "exists on the project at" , util?.path," with version",util?.configFile?.version )
+        if(util.configFile.private){
+            logger.log("utility",input_utility_name," exists on project and it is private")
+            return
+        }
+        logger.log("utility", input_utility_name, "exists on the project at" , util?.path," with version",util?.configFile?.version )
     }
     const update_dependency_on_package_dot_json = async (selected_version: Version) => {
         if (!main_dep) {
