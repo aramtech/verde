@@ -61,6 +61,7 @@ export const pull_utility = async ({
     input_utility_name: string;
     version?: string;
     main_dep: boolean;
+    force?: boolean; 
     update_policy?: "major" | "minor" | "batch" | "fixed";
 }) => {
     /**
@@ -187,25 +188,27 @@ export const pull_utility = async ({
     const check_result = await checkUtility(projectContext, util.configFile.name);
     util.configFile.hash = check_result.currentHash;
 
-    const remote_config_file_for_current_version = await get_remote_version_config_file(
-        owner,
-        repo,
-        util.configFile.version,
-    );
-    if (remote_config_file_for_current_version) {
-        if (remote_config_file_for_current_version.hash != util.configFile.hash) {
-            logger.warning(
-                "utility ",
-                util.configFile.name,
-                "at",
-                util.path,
-                "current version",
-                util.configFile.version,
-                " local hash does not remote hash, please make sure you updated the version and push",
-            );
-            return;
-        }
-    }
+    // const remote_config_file_for_current_version = await get_remote_version_config_file(
+    //     owner,
+    //     repo,
+    //     util.configFile.version,
+    // );
+    // if (remote_config_file_for_current_version) {
+    //     if (remote_config_file_for_current_version.hash != util.configFile.hash) {
+    //         logger.warning(
+    //             "utility ",
+    //             util.configFile.name,
+    //             "at",
+    //             util.path,
+    //             "which has the lasted version of", 
+    //             versions.at(-1)?.version, 
+    //             "and locurrent version",
+    //             util.configFile.version,
+    //             "local hash does not math remote hash, please make sure to check then update the version and push",
+    //         );
+    //         return;
+    //     }
+    // }
 
     if (update_policy == "fixed") {
         const version = target_version.version;
@@ -257,7 +260,7 @@ export const pull_utility = async ({
     }
 };
 
-export const pull_all_utilities = async ({ keep_excess_utilities = false }: { keep_excess_utilities?: boolean }) => {
+export const pull_all_utilities = async ({ keep_excess_utilities = false }: { keep_excess_utilities?: boolean, force?: boolean }) => {
     const package_dot_json = projectContext.packageFile;
     const main_dependencies = package_dot_json.verde.dependencies;
 

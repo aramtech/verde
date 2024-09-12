@@ -114,6 +114,7 @@ const addPullCommand = (program: Command) =>
         .command("pull [name]")
         .option("-k, --keep-excess-utilities")
         .option("-v, --version <version>")
+        .option("-f, --force", "if there is valid update it will overwrite current changes")
         .action(
             async (
                 name: string | undefined,
