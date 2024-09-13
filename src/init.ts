@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import { hashBuffersWithSha256 } from "./crypto";
 import { collectFilePathsIn, isStoredOnDisk, readFiles, storeJSON } from "./fs";
@@ -9,6 +10,7 @@ import { process_utility_identifier_input, type UtilityFile } from "./utility";
 export const initNewUtility = async (name: string, description: string) => {
     const context = projectContext;
     const { owner, repo: utility_name } = await process_utility_identifier_input(name);
+
 
     if (await isStoredOnDisk(utilityConfigFileName)) {
         logger.fatal("directory already managed by verde!.");
@@ -41,6 +43,10 @@ export const initNewUtility = async (name: string, description: string) => {
 
     const files = await readFiles(sortedPaths);
     const hash = hashBuffersWithSha256(files);
+
+    if(!fs.existsSync("README.md")){
+        fs.writeFileSync("README.md", `# ${utility_name}`)
+    }
 
     await storeJSON<UtilityFile>(utilityConfigFileName, {
         name: utility_name,
