@@ -13,14 +13,20 @@ export type CollectResult = {
     contents: string[];
 };
 
+const exlusions = ["node_modules"]
+
 export const collectFilePathsIn = async (dir: string) => {
     const contents = await fs.readdirSync(dir);
     let results: string[] = [];
 
     for (const c of contents) {
+        if(exlusions.some(e=>c.startsWith(e))){
+            continue
+        }
         const stats = fs.statSync(path.join(dir, c));
 
         if (stats.isDirectory()) {
+            
             const gotten = await collectFilePathsIn(path.join(dir, c));
             results.push(...gotten);
             continue;
